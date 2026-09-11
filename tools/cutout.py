@@ -72,7 +72,8 @@ def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     bg = np.median(ring, axis=0)
 
     dist = np.linalg.norm(im - bg, axis=2)
-    smooth = ndimage.gaussian_filter(dist, max(3.0, 0.006 * max(w, h)))
+    sigma = max(3.0, 0.006 * max(w, h))
+    smooth = ndimage.gaussian_filter(dist, sigma)
 
     coarse = smooth > max(tol_lo * 0.5, otsu(smooth))
     # Close notches thinner than a real armhole. A low-contrast colourway can
@@ -89,8 +90,14 @@ def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     sizes = ndimage.sum(coarse, lbl, range(1, n + 1))
     coarse = lbl == (int(np.argmax(sizes)) + 1)
 
+    # Smoothing pushes the silhouette outward by roughly its sigma, and a soft
+    # drop shadow pushes it further still, so the matte edge lands outside the
+    # garment and keeps a grey halo. Pull it back onto the real boundary.
+    coarse = ndimage.binary_erosion(coarse, np.ones((3, 3)),
+                                    iterations=int(round(sigma)))
+
     # solid interior, soft ramp only in a thin band at the silhouette edge
-    band = max(2, int(round(0.004 * max(w, h))))
+    band = max(2, int(round(0.0015 * max(w, h))))
     inner = ndimage.binary_erosion(coarse, np.ones((3, 3)), iterations=band)
     outer = ndimage.binary_dilation(coarse, np.ones((3, 3)), iterations=band)
 
