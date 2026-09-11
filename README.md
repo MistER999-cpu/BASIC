@@ -23,7 +23,10 @@ npm install
 ## Use it
 
 ```bash
-# 1. cut the product shots off their backdrop (one shared crop for all)
+# 1. install the product shots - filenames do not matter
+python3 tools/ingest.py assets/incoming      # a folder, or a .zip
+
+#    (tools/cutout.py is the same thing with explicit names, if you prefer)
 python3 tools/cutout.py --outdir assets/products \
     white=shots/white.jpg black=shots/black.jpg brown=shots/brown.jpg
 
@@ -143,6 +146,20 @@ share one crop so the product cannot jump between colourways as a reel spins.
 | `tools/track-hand.py` | Follows the lever hand through the gesture |
 | `tools/fit-lever.py` | Fits the handle's pivot and arm to that arc |
 | `tools/standins.mjs` | **Temporary** placeholder products — delete once real cutouts are in |
+
+## Getting photos into the project
+
+Images pasted into a chat may arrive as vision input rather than as files, in
+which case there is nothing on disk to matte. Two routes that always produce a
+real file:
+
+- **Zip them.** A `.zip` is not an image, so it uploads as a file.
+  `python3 tools/ingest.py shots.zip`
+- **Commit them.** Drop them in `assets/incoming/` on GitHub, then pull.
+
+`tools/ingest.py` sorts them into white / black / brown by the garment's own
+mean colour — lightest, darkest, and the warm one in between — so whatever the
+files are called, they land in the right reel.
 
 ## Placeholders cannot ship by accident
 

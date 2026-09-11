@@ -9,7 +9,8 @@
     "products": "node tools/scan-products.mjs",
     "cutout": "python3 tools/cutout.py",
     "onsets": "python3 tools/onsets.py assets/base/base.mp4",
-    "standins": "node tools/standins.mjs"
+    "standins": "node tools/standins.mjs",
+    "ingest": "python3 tools/ingest.py assets/incoming"
   },
   "repository": {
     "type": "git",
