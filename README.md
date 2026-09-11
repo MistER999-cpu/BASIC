@@ -94,6 +94,7 @@ Re-run the tool and update `timeline` if the audio changes.
 | `panel.cx` / `cy` / `w` / `h` | Placement, as fractions of the frame |
 | `panel.rimDisplace` / `liquidFreq` | The liquid bend in the edge band. 0 = plain frosted glass |
 | `reels.targets` | Which product each reel lands on, left to right |
+| `reels.colorShift` | A settled reel breathing between two finishes: `{reel, to, delay, period}` |
 | `reels.starts` | What each reel shows before the spin |
 | `reels.loops` | Whole revolutions per reel. **Integers only** |
 | `reels.decel` / `creep` | Deceleration shape, and the speed held until the detent catches |
@@ -157,9 +158,21 @@ real file:
   `python3 tools/ingest.py shots.zip`
 - **Commit them.** Drop them in `assets/incoming/` on GitHub, then pull.
 
-`tools/ingest.py` sorts them into white / black / brown by the garment's own
-mean colour — lightest, darkest, and the warm one in between — so whatever the
-files are called, they land in the right reel.
+`tools/ingest.py` sorts three or four photos by the garment's own mean colour —
+darkest to lightest is black, brown, beige, white — so whatever the files are
+called, they land in the right reel.
+
+Two things it handles that a naive crop does not:
+
+- **Alignment.** A shared crop rectangle preserves scale but not position.
+  These garments were laid out slightly differently, so their bounding boxes sit
+  up to 38px apart and the reels read as visibly out of line. Each garment's own
+  box is centred in a common canvas instead — same scale, same centreline.
+- **Uneven backdrops.** One shot falls off from rgb(211,208,215) at the
+  top-left to rgb(167,163,171) at the bottom-right. Against a single median
+  colour that dark corner reads as far from the backdrop as the garment does,
+  and the whole frame mattes as foreground. The backdrop is fitted as a
+  quadratic surface per channel so the falloff is tracked.
 
 ## Placeholders cannot ship by accident
 

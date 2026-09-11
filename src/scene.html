@@ -81,6 +81,15 @@
     mix-blend-mode:screen; opacity:0;
   }
 
+  /* colourway shift: a second garment cross-faded over the settled detent */
+  #shifts { position:absolute; inset:0; display:flex; pointer-events:none; z-index:2; }
+  .shiftcol { position:relative; flex:1 1 0; overflow:hidden; }
+  .shiftcol .cellbox {
+    position:absolute; left:0; right:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .shiftcol img { width:100%; height:100%; object-fit:contain; display:block; opacity:0; }
+
   /* per-reel light sweep that runs down the cell as the detent catches */
   #sweeps { position:absolute; inset:0; display:flex; pointer-events:none; z-index:3; }
   .sweep { position:relative; flex:1 1 0; overflow:hidden; }
@@ -131,6 +140,7 @@
   </svg>
   <div id="panel">
     <div id="reels"></div>
+    <div id="shifts"></div>
     <div id="sweeps"></div>
     <div id="spec"></div>
     <div id="rim"></div>

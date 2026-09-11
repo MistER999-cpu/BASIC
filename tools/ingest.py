@@ -49,9 +49,9 @@ def main():
 
     files, tmp = gather(args[0])
     try:
-        if len(files) != 3:
+        if len(files) not in (3, 4):
             raise SystemExit(
-                f'expected 3 product photos, found {len(files)}:\n  ' +
+                f'expected 3 or 4 product photos, found {len(files)}:\n  ' +
                 '\n  '.join(files or ['(none)']))
 
         shots = []
@@ -65,41 +65,46 @@ def main():
             ys, xs = np.where(alpha > 0.06)
             shots.append({'src': f, 'rgb': rgb, 'alpha': alpha, 'luma': luma,
                           'mean': mean, 'bbox': (ys.min(), ys.max(), xs.min(), xs.max())})
-            print(f'  {os.path.basename(f):<34} garment rgb'
-                  f'({mean[0]:3.0f},{mean[1]:3.0f},{mean[2]:3.0f})  luma {luma:5.1f}')
+            print(f'  {os.path.basename(f)[-30:]:<32} rgb'
+                  f'({mean[0]:3.0f},{mean[1]:3.0f},{mean[2]:3.0f})  luma {luma:5.1f}'
+                  f'  box {xs.max()-xs.min()+1}x{ys.max()-ys.min()+1}')
 
-        # lightest is white, darkest is black, the middle one is brown
+        # sorted darkest to lightest: black, brown, beige, white
         shots.sort(key=lambda s: s['luma'])
-        names = ['black', 'brown', 'white']
-        for s, n in zip(shots, names):
+        order = {3: ['black', 'brown', 'white'],
+                 4: ['black', 'brown', 'beige', 'white']}[len(shots)]
+        for s, n in zip(shots, order):
             s['name'] = n
+            warm = s['mean'][0] - s['mean'][2]
+            print(f'  {n:<6} <- {os.path.basename(s["src"])[-30:]:<32} warmth R-B {warm:+.0f}')
 
-        warm = shots[1]['mean'][0] - shots[1]['mean'][2]
-        print(f'\n  black  <- {os.path.basename(shots[0]["src"])}')
-        print(f'  brown  <- {os.path.basename(shots[1]["src"])}   (warmth R-B = {warm:+.0f})')
-        print(f'  white  <- {os.path.basename(shots[2]["src"])}')
-        if warm < 8:
-            print('  NOTE: the middle photo is not obviously warm; check the '
-                  'brown assignment above before rendering.')
-
-        # one shared crop across all three
-        y0 = min(s['bbox'][0] for s in shots); y1 = max(s['bbox'][1] for s in shots)
-        x0 = min(s['bbox'][2] for s in shots); x1 = max(s['bbox'][3] for s in shots)
-        pad = int(round(0.04 * max(y1-y0, x1-x0)))
-        H, W = shots[0]['alpha'].shape
-        y0, y1 = max(0, y0-pad), min(H, y1+1+pad)
-        x0, x1 = max(0, x0-pad), min(W, x1+1+pad)
+        # A shared crop rectangle keeps scale but not position: these garments
+        # were laid out slightly differently, so their bounding boxes sit up to
+        # 38px apart and the reels read as misaligned. Centre each garment's own
+        # box in a common canvas instead - same scale, same centreline.
+        boxw = max(s['bbox'][3] - s['bbox'][2] + 1 for s in shots)
+        boxh = max(s['bbox'][1] - s['bbox'][0] + 1 for s in shots)
+        pad = int(round(0.04 * max(boxw, boxh)))
+        CW, CH = boxw + 2*pad, boxh + 2*pad
 
         os.makedirs(outdir, exist_ok=True)
         for s in shots:
-            write_rgba(f'{outdir}/{s["name"]}.png',
-                       np.dstack([s['rgb'][y0:y1, x0:x1], s['alpha'][y0:y1, x0:x1]*255]))
+            y0, y1, x0, x1 = s['bbox']
+            sub_rgb = s['rgb'][y0:y1+1, x0:x1+1]
+            sub_a = s['alpha'][y0:y1+1, x0:x1+1]
+            h, w = sub_a.shape
+            oy, ox = (CH - h) // 2, (CW - w) // 2
+            canvas = np.zeros((CH, CW, 4), np.float32)
+            canvas[oy:oy+h, ox:ox+w, :3] = sub_rgb
+            canvas[oy:oy+h, ox:ox+w, 3] = sub_a * 255
+            write_rgba(f'{outdir}/{s["name"]}.png', canvas)
+            print(f'    {s["name"]:<6} {w}x{h} centred in {CW}x{CH}')
 
         marker = os.path.join(outdir, '.STANDIN')
         if os.path.exists(marker):
             os.remove(marker)
             print('\n  placeholder marker cleared - renders are unblocked')
-        print(f'  shared crop {x1-x0}x{y1-y0} -> {outdir}/')
+        print(f'  {len(shots)} products -> {outdir}/  (common canvas {CW}x{CH})')
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)

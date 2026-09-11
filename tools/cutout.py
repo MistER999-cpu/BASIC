@@ -62,15 +62,43 @@ def otsu(x):
     return centers[int(np.nanargmax(between))]
 
 
+def fit_backdrop(im, ring=48):
+    """Model the backdrop as a smooth quadratic surface across the frame.
+
+    Studio sweeps are rarely evenly lit: one of these shots falls off from
+    rgb(211,208,215) at the top-left to rgb(167,163,171) at the bottom-right.
+    Against a single median colour the dark corner reads as far from the
+    backdrop as the garment does, and the whole frame mattes as foreground.
+    Fitting 1, x, y, x^2, xy, y^2 per channel to the border tracks the falloff.
+    """
+    h, w, _ = im.shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    xn, yn = xx / w - 0.5, yy / h - 0.5
+
+    edge = np.zeros((h, w), bool)
+    edge[:ring] = edge[-ring:] = True
+    edge[:, :ring] = edge[:, -ring:] = True
+
+    basis = lambda X, Y: np.stack([np.ones_like(X), X, Y, X*X, X*Y, Y*Y], axis=-1)
+    A = basis(xn[edge], yn[edge])
+    full = basis(xn, yn).reshape(-1, 6)
+
+    out = np.empty_like(im)
+    for c in range(3):
+        # median-ish fit: drop the tail so a garment touching the edge can't pull it
+        coef, *_ = np.linalg.lstsq(A, im[..., c][edge], rcond=None)
+        pred = A @ coef
+        keep = np.abs(im[..., c][edge] - pred) < 3 * np.std(im[..., c][edge] - pred) + 1e-6
+        coef, *_ = np.linalg.lstsq(A[keep], im[..., c][edge][keep], rcond=None)
+        out[..., c] = (full @ coef).reshape(h, w)
+    return out
+
+
 def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     w, h = probe(src)
     im = read_rgb(src, w, h)
 
-    # backdrop colour from a border ring; median so a stray pixel can't skew it
-    ring = np.concatenate([im[:8].reshape(-1, 3), im[-8:].reshape(-1, 3),
-                           im[:, :8].reshape(-1, 3), im[:, -8:].reshape(-1, 3)])
-    bg = np.median(ring, axis=0)
-
+    bg = fit_backdrop(im)
     dist = np.linalg.norm(im - bg, axis=2)
     sigma = max(3.0, 0.006 * max(w, h))
     smooth = ndimage.gaussian_filter(dist, sigma)
@@ -110,7 +138,7 @@ def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     # despill: unmix the backdrop out of edge pixels so no halo survives
     a3 = np.clip(alpha, 1e-3, 1)[..., None]
     rgb = np.where(inner[..., None], im, np.clip(bg + (im - bg) / a3, 0, 255))
-    return rgb, alpha, bg
+    return rgb, alpha, bg.reshape(-1, 3).mean(axis=0)
 
 
 def main():

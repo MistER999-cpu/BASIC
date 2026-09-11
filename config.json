@@ -23,6 +23,10 @@
     {
       "src": "assets/products/brown.png",
       "name": "Brown"
+    },
+    {
+      "src": "assets/products/beige.png",
+      "name": "Beige"
     }
   ],
   "panel": {
@@ -58,7 +62,13 @@
     "cellHeight": 0.88,
     "cellScale": 0.92,
     "decel": 3,
-    "creep": 4.0
+    "creep": 4.0,
+    "colorShift": {
+      "reel": 2,
+      "to": 3,
+      "delay": 0.12,
+      "period": 0.449
+    }
   },
   "timeline": {
     "panelIn": [

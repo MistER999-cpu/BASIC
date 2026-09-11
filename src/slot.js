@@ -127,6 +127,29 @@ window.build = function (cfg) {
     });
   }
 
+  /* ---- colourway shift overlay, sitting in the detent ---- */
+  const shiftsEl = document.getElementById('shifts');
+  shiftsEl.innerHTML = '';
+  S.shifts = [];
+  const cs = cfg.reels.colorShift;
+  for (let r = 0; r < R; r++) {
+    const col = document.createElement('div');
+    col.className = 'shiftcol';
+    const box = document.createElement('div');
+    box.className = 'cellbox';
+    box.style.top = cellPad + 'px';
+    box.style.height = cellH + 'px';
+    const img = document.createElement('img');
+    if (cs && cs.reel === r) {
+      img.src = S.P[cs.to].src;
+      img.style.transform = `scale(${cfg.reels.cellScale})`;
+    }
+    box.appendChild(img);
+    col.appendChild(box);
+    shiftsEl.appendChild(col);
+    S.shifts.push(cs && cs.reel === r ? img : null);
+  }
+
   /* ---- per-reel light sweeps ---- */
   const sw = document.getElementById('sweeps');
   sw.innerHTML = '';
@@ -229,6 +252,18 @@ window.setTime = function (t) {
   shake += spike(t - tl.spinStart, 0.22) * Math.sin((t - tl.spinStart) * 150) * (fx.shakePx ?? 5);
 
   S.flash.style.opacity = flash.toFixed(3);
+
+  /* colourway shift: the settled reel breathes between its two finishes */
+  const cs = S.cfg.reels.colorShift;
+  if (cs) {
+    const img = S.shifts[cs.reel];
+    if (img) {
+      const dt = t - (S.reels[cs.reel].stop + (cs.delay ?? 0.12));
+      const a = dt <= 0 ? 0
+        : 0.5 - 0.5 * Math.cos(2 * Math.PI * dt / (cs.period ?? 0.5));
+      img.style.opacity = a.toFixed(3);
+    }
+  }
 
   /* the glass charges while the handle is being pulled */
   const charge = S.cfg.lever
