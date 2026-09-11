@@ -1,18 +1,20 @@
 # Liquid-glass slot reveal
 
-A reusable version of the glass-panel slot-machine product reveal: a frosted,
-refracting panel floats over your footage, three reels spin your products
-vertically, they land on a matching set, and the winner grows into a hero shot.
+A frosted, refracting glass panel floats over vertical footage; three reels spin
+product colourways vertically and stop one at a time, each on its own colour, so
+the payoff is the full range sitting side by side. Nothing follows the last stop
+— the clip ends on the landed reels.
 
-Everything is rendered in headless Chromium — real `backdrop-filter` refraction
-of your actual footage — then composited and motion-blurred in ffmpeg.
+Everything renders in headless Chromium, so `backdrop-filter` refracts the
+actual footage rather than faking it with a static blur. ffmpeg then accumulates
+subframes into real motion blur and muxes the original audio back untouched.
 
 ## Requirements
 
-- Node 18+
+- Node 18+, Python 3 with `numpy` and `scipy`
 - `ffmpeg` on `PATH`
-- Chromium. Auto-detected under `PLAYWRIGHT_BROWSERS_PATH`, or set `CHROME_PATH`,
-  or `npx playwright install chromium`.
+- Chromium: auto-detected under `PLAYWRIGHT_BROWSERS_PATH`, or set `CHROME_PATH`,
+  or `npx playwright install chromium`
 
 ```bash
 npm install
@@ -20,93 +22,92 @@ npm install
 
 ## Use it
 
-1. **Drop in your products.** Transparent PNG cutouts (or SVG) in
-   `assets/products/`, shot flat and framed consistently — the reels trust that
-   every product sits the same way in its own file.
-
-   ```bash
-   npm run products          # rebuilds config.json from that folder
-   ```
-
-2. **Drop in your footage** as `assets/base/base.mp4`, or point at it directly.
-
-3. **Render.**
-
-   ```bash
-   npm run render -- --base assets/base/base.mp4 \
-                     --wordmark "YOUR BRAND" \
-                     --winner 2 \
-                     --out out/final.mp4
-   ```
-
-With no base video it generates a neutral studio plate so you can see the
-effect immediately.
-
-### Check before committing to a full render
-
 ```bash
-npm run verify                      # asserts every reel lands on the winner
-npm run preview -- "1,5,9.2,10.5"   # stills at those timestamps -> out/preview/
+# 1. cut the product shots off their backdrop (one shared crop for all)
+python3 tools/cutout.py --outdir assets/products \
+    white=shots/white.jpg black=shots/black.jpg brown=shots/brown.jpg
+
+# 2. drop the footage in
+cp your-clip.mp4 assets/base/base.mp4
+
+# 3. find the beats to stop the reels on
+python3 tools/onsets.py assets/base/base.mp4
+
+# 4. put those times in config.json -> timeline, then
+npm run verify      # asserts each reel lands on its intended colour
+npm run render
 ```
 
-A full 15s 1080×1920 render at 4 subframes takes roughly 8 minutes. Previews
-take seconds, so tune there first.
+A 9.5s 1080×1920 render at 4 subframes takes about 4 minutes. Previews take
+seconds, so tune there first:
+
+```bash
+npm run preview -- "0.3,4,6.7,8.6"     # stills at those times -> out/preview/
+```
+
+## Timing is driven by the audio, not guessed
+
+`tools/onsets.py` reports spectral-flux transients. Put the spin start and the
+three stops on real onsets — a reel that stops between beats reads as a glitch
+rather than a detent. The current `config.json` is locked to this clip's audio:
+intro hits at 0.12/0.28/0.41, the spin hit at 2.72, stops at 6.56 / 7.70 / 8.44.
+Re-run the tool and update `timeline` if the audio changes.
 
 ## Tuning
-
-Everything lives in `config.json`.
 
 | Key | What it does |
 |---|---|
 | `panel.blur` / `saturate` / `brightness` | How hard the glass refracts what's behind it |
 | `panel.tint` | Milkiness. Lower = clearer glass |
-| `panel.radius` | Corner radius at 1080px wide; scales with output |
+| `panel.cx` / `cy` / `w` / `h` | Placement, as fractions of the frame |
 | `panel.rimDisplace` / `liquidFreq` | The liquid bend in the edge band. 0 = plain frosted glass |
-| `panel.cx` / `cy` / `w` / `h` | Panel placement, as fractions of the frame |
-| `reels.loops` | Whole revolutions per reel before it stops. **Integers only** |
-| `reels.cellHeight` | Slot window height as a fraction of the panel |
-| `reels.cellScale` | Product size inside its cell |
-| `timeline.reelStops` | When each reel stops. Stagger these — it's what sells it |
-| `hero.w` / `cy` | Size and height of the winning product after the panel dissolves |
+| `reels.targets` | Which product each reel lands on, left to right |
+| `reels.starts` | What each reel shows before the spin |
+| `reels.loops` | Whole revolutions per reel. **Integers only** |
+| `reels.decel` / `creep` | Deceleration shape, and the speed held until the detent catches |
+| `reels.cellHeight` / `cellScale` | Slot window height, and product size inside it |
+| `timeline.reelStops` | When each reel stops. These are the beats |
 | `output.subframes` | Motion blur quality. 1 = none, 4 = good, 6+ = slow |
 
-`reels.loops` must be whole numbers. Fractional values leave the reel
-mathematically unable to land on the winner; `npm run verify` catches it.
+Two constraints the code enforces, because both fail silently otherwise:
 
-## How it works
+- **`reels.loops` must be whole numbers.** A fractional count leaves the reel
+  mathematically unable to land on its target; it is floored and asserted.
+- **`reels.targets` must be in range**, and `npm run verify` hit-tests the
+  settled reels against them.
 
-```
-base video ──ffmpeg──> plate frames ──┐
-                                      ├──> Chromium: plate behind the glass,
-products ─────────────────────────────┘    backdrop-filter refracts it live,
-                                           reels stepped by setTime(t)
-                                                     │
-                                      screenshots at fps × subframes
-                                                     │
-                              ffmpeg tmix ──> accumulation motion blur ──> H.264
-```
+### Why a velocity profile instead of an easing curve
 
-The reels are stepped deterministically by `window.setTime(t)` — no
-`requestAnimationFrame`, no wall clock — so a render is exactly reproducible and
-can be resumed or re-run frame-for-frame.
+A power-law ease crawls asymptotically into its stop. With only three colourways
+that means the final colour is already sitting in the window a second before the
+beat it is meant to land on, and the stop reads as nothing happening. `slot.js`
+integrates a velocity that decays to a minimum creep speed instead, so the reel
+is visibly turning right up to the hit where the detent catches it dead. The
+integral over the spin is exactly `travel`, so it still lands on the target cell
+to the pixel.
 
-Motion blur is real accumulation, not a directional blur filter: every output
-frame is the average of `subframes` renders taken across its exposure, which is
-why the spinning products smear the way they do on the way past.
+### Why the cutout works from a smoothed difference field
+
+A pale colourway can have edge pixels as close to the backdrop as the backdrop
+itself, so filling inward from the image border leaks into the garment and
+carves a transparent gash. `cutout.py` thresholds a heavily smoothed
+difference-from-backdrop field instead: inside the product it stays elevated
+even where local colour matches, and flat near zero on true backdrop. All inputs
+share one crop so the product cannot jump between colourways as a reel spins.
+
+## Layout
 
 | File | Role |
 |---|---|
-| `src/scene.html` | The glass panel, reels, hero, packshot, end card |
-| `src/slot.js` | Reel physics, landing math, the whole timeline |
-| `src/render.mjs` | Steps the scene and screenshots each subframe |
-| `src/pipeline.mjs` | ffmpeg extract → render → blur → encode |
-| `tools/` | Preview stills, jackpot verification, placeholder products, plate |
+| `src/scene.html` | The glass panel and the three reels |
+| `src/slot.js` | Reel velocity, landing math, timeline |
+| `src/render.mjs` | Steps the scene via `setTime(t)` and captures each subframe |
+| `src/pipeline.mjs` | plate frames → render → tmix blur → H.264 + original audio |
+| `tools/cutout.py` | Product shots → transparent PNGs, shared crop |
+| `tools/onsets.py` | Audio transients to place the stops on |
+| `tools/verify.mjs` | Asserts each reel lands on its target |
+| `tools/preview.mjs` | Stills at chosen timestamps |
+| `tools/standins.mjs` | **Temporary** placeholder products — delete once real cutouts are in |
 
-## Notes
-
-- The end card and wordmark are yours to set (`--wordmark`, `brand.*` in config).
-  Placeholder products in `assets/products/` are generated stand-ins — replace
-  them with your own cutouts and delete `tools/make-placeholders.mjs`.
-- Audio is copied from the base video untouched. The reference sound design is
-  just an ambient pad plus a bright transient on the first spin and on the final
-  stop — worth adding on a stagger that matches `timeline.reelStops`.
+Reels are stepped by an explicit `setTime(t)` rather than `requestAnimationFrame`
+or the wall clock, so a render is reproducible frame-for-frame.

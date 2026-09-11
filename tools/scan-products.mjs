@@ -20,11 +20,12 @@ cfg.products = files.map(f => ({
   src: join(dir, f),
   name: title(f.replace(/\.\w+$/, '').replace(/^tank[-_ ]?0?/i, '')) || f,
 }));
-if (cfg.winner >= cfg.products.length) cfg.winner = 0;
+cfg.reels.targets = cfg.reels.targets.map(i => Math.min(i, cfg.products.length - 1));
 
 writeFileSync('config.json', JSON.stringify(cfg, null, 2));
 console.log(`${files.length} products written to config.json:`);
+const tg = cfg.reels.targets;
 cfg.products.forEach((p, i) =>
-  console.log(`  [${i}]${i === cfg.winner ? ' *' : '  '} ${p.src}`));
-console.log(`\nwinner = [${cfg.winner}] ${cfg.products[cfg.winner].name}` +
-            `  (change with: node src/pipeline.mjs --winner N)`);
+  console.log(`  [${i}]${tg.includes(i) ? ' *' : '  '} ${p.src}`));
+console.log(`\nreels land on: ${tg.map(i => `[${i}] ${cfg.products[i].name}`).join('  ')}`);
+console.log(`change with: node src/pipeline.mjs --targets ${tg.join(',')}`);

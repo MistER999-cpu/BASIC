@@ -1,5 +1,5 @@
 /* Headless check: every reel must come to rest on the winning product.
-   #spec / #rim / #wordmark sit above the reels, so hit-test through the
+   #spec and #rim sit above the reels, so hit-test through the
    whole stack rather than taking just the topmost element. */
 import { launch, absolutizeAssets } from '../src/browser.mjs';
 import { readFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ page.on('pageerror', e => { console.error('  PAGE ERROR:', e.message); process.e
 await page.goto(pathToFileURL(resolve('src/scene.html')).href, { waitUntil: 'load' });
 await page.evaluate(c => window.build(c), absolutizeAssets(cfg));
 
-const settleAt = Math.max(...cfg.timeline.reelStops) + 0.6;
+const settleAt = Math.max(...cfg.timeline.reelStops) + 0.4;
 await page.evaluate(t => window.setTime(t), settleAt);
 
 const landed = await page.evaluate(() =>
@@ -28,15 +28,19 @@ const landed = await page.evaluate(() =>
   })
 );
 
-const want = cfg.products[cfg.winner].src.split('/').pop();
+/* each reel has its own target - the payoff is the three colourways together */
+const want = cfg.reels.targets.map(i => cfg.products[i].src.split('/').pop());
 let ok = true;
 landed.forEach((got, i) => {
-  const good = got === want;
+  const good = got === want[i];
   ok &&= good;
-  console.log(`  reel ${i}: ${good ? 'OK  ' : 'FAIL'} -> ${got ?? '(nothing)'}`);
+  console.log(`  reel ${i}: ${good ? 'OK  ' : 'FAIL'} -> ${got ?? '(nothing)'}`
+            + `${good ? '' : `   expected ${want[i]}`}`);
 });
+const distinct = new Set(want).size === want.length;
+if (!distinct) console.log('  WARNING: targets are not all distinct');
 console.log(ok
-  ? `\n  jackpot verified at t=${settleAt.toFixed(2)}s: all reels on ${want}`
-  : `\n  MISMATCH: expected every reel on ${want}`);
+  ? `\n  verified at t=${settleAt.toFixed(2)}s: ${want.join(' / ')}`
+  : `\n  MISMATCH: expected ${want.join(' / ')}`);
 if (!ok) process.exitCode = 1;
 await browser.close();

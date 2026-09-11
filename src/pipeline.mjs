@@ -10,8 +10,8 @@ const has  = k => args.includes(k);
 
 const cfg = JSON.parse(readFileSync(opt('--config', 'config.json'), 'utf8'));
 if (opt('--base'))     cfg.base.video     = opt('--base');
-if (opt('--wordmark')) cfg.brand.wordmark = opt('--wordmark');
-if (opt('--winner'))   cfg.winner         = +opt('--winner');
+if (opt('--targets')) cfg.reels.targets = opt('--targets').split(',').map(Number);
+if (opt('--starts'))  cfg.reels.starts  = opt('--starts').split(',').map(Number);
 const OUT = opt('--out', 'out/final.mp4');
 const ff  = (...a) => execFileSync('ffmpeg', ['-hide_banner','-loglevel','error','-y',...a],
                                    { stdio: ['ignore','inherit','inherit'] });

@@ -1,13 +1,15 @@
 {
   "name": "liquid-glass-slot",
   "version": "1.0.0",
-  "description": "Liquid-glass slot-machine product reveal, composited onto vertical video",
+  "description": "Liquid-glass slot-machine colourway reveal, composited onto vertical video",
   "scripts": {
     "render": "node src/pipeline.mjs",
     "preview": "node tools/preview.mjs",
     "verify": "node tools/verify.mjs",
     "products": "node tools/scan-products.mjs",
-    "placeholders": "node tools/make-placeholders.mjs"
+    "cutout": "python3 tools/cutout.py",
+    "onsets": "python3 tools/onsets.py assets/base/base.mp4",
+    "standins": "node tools/standins.mjs"
   },
   "repository": {
     "type": "git",
