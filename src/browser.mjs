@@ -1,7 +1,7 @@
 /* Resolves a usable Chromium. Prefers the full browser over headless_shell:
    SVG-filter backdrop-filter is better supported there. */
 import { chromium } from 'playwright-core';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 function findChrome() {
@@ -47,6 +47,13 @@ import { pathToFileURL } from 'node:url';
 
 export function absolutizeAssets(cfg) {
   const out = structuredClone(cfg);
+  /* the lever's fitted pivot and hand track live in their own file so the
+     tracking step can be re-run without touching config.json */
+  if (out.lever?.file) {
+    const p = resolve(out.lever.file);
+    if (!existsSync(p)) throw new Error(`lever track not found: ${out.lever.file}`);
+    Object.assign(out.lever, JSON.parse(readFileSync(p, 'utf8')));
+  }
   out.products = out.products.map(p => {
     if (/^(file|https?|data):/.test(p.src)) return p;
     const abs = resolve(p.src);

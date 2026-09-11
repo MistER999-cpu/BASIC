@@ -45,12 +45,41 @@ seconds, so tune there first:
 npm run preview -- "0.3,4,6.7,8.6"     # stills at those times -> out/preview/
 ```
 
+## The handle
+
+The model mimes pulling a slot lever — she reaches at ~1.8s, her fingers close
+at 2.1–2.5s, and the fist pulls down through 3.0s. A handle is drawn onto that
+gesture:
+
+```bash
+python3 tools/track-hand.py assets/base/base.mp4 1.0 3.6 > out/hand.json
+python3 tools/fit-lever.py out/hand.json 1.90 3.05 > assets/lever.json
+```
+
+`track-hand.py` follows skin tone inside the arm's corridor — the face is also
+skin-toned and sits higher than the hand for most of the gesture, so a plain
+"topmost blob" rule tracks the face instead. `fit-lever.py` then fits the pivot
+a lever would need to trace that arc.
+
+Two notes on the fit. A free circle fit is degenerate here: the mimed arc is
+shallow enough to be nearly a straight line, which sends an algebraic fit off to
+a 75px arm with 33% residual — hence the constrained pivot search. And the best
+fit lands at the frame edge, where the rod reads as a streak across the corner
+rather than a handle, so `lever.pivotOverride` mounts it to the glass panel
+instead. That costs about 5% arm-length variation, invisible on a glowing rod,
+and buys a handle that belongs to the interface.
+
+The knob is drawn on the tracked hand directly, so the grip stays convincing
+even where the rigid-arm assumption drifts.
+
 ## Timing is driven by the audio, not guessed
 
 `tools/onsets.py` reports spectral-flux transients. Put the spin start and the
 three stops on real onsets — a reel that stops between beats reads as a glitch
 rather than a detent. The current `config.json` is locked to this clip's audio:
-intro hits at 0.12/0.28/0.41, the spin hit at 2.72, stops at 6.56 / 7.70 / 8.44.
+intro hits at 0.12/0.28/0.41 and stops at 6.56 / 7.70 / 8.44. The spin starts on
+the 3.042s onset (strength 0.881) because that is where the lever bottoms out —
+not the 2.72s hit, which falls mid-pull.
 Re-run the tool and update `timeline` if the audio changes.
 
 ## Tuning
@@ -67,6 +96,10 @@ Re-run the tool and update `timeline` if the audio changes.
 | `reels.decel` / `creep` | Deceleration shape, and the speed held until the detent catches |
 | `reels.cellHeight` / `cellScale` | Slot window height, and product size inside it |
 | `timeline.reelStops` | When each reel stops. These are the beats |
+| `timeline.leverIn` / `leverPull` / `leverOut` | Handle appears, is pulled, springs back |
+| `lever.pivotOverride` | Where the handle is mounted. Omit to use the fitted pivot |
+| `fx.launchGain` / `stopGain` | Impact bloom on the launch and on each detent |
+| `fx.shakePx` / `sweepDur` | Panel kick, and the light sweep down a landed cell |
 | `output.subframes` | Motion blur quality. 1 = none, 4 = good, 6+ = slow |
 
 Two constraints the code enforces, because both fail silently otherwise:
@@ -107,7 +140,16 @@ share one crop so the product cannot jump between colourways as a reel spins.
 | `tools/onsets.py` | Audio transients to place the stops on |
 | `tools/verify.mjs` | Asserts each reel lands on its target |
 | `tools/preview.mjs` | Stills at chosen timestamps |
+| `tools/track-hand.py` | Follows the lever hand through the gesture |
+| `tools/fit-lever.py` | Fits the handle's pivot and arm to that arc |
 | `tools/standins.mjs` | **Temporary** placeholder products — delete once real cutouts are in |
+
+## Placeholders cannot ship by accident
+
+`tools/standins.mjs` leaves an `assets/products/.STANDIN` marker and the
+pipeline refuses to render while it exists. Running `tools/cutout.py` on real
+photographs clears it. Placeholders look plausible at reel size, which is
+exactly how one ends up in a delivered cut.
 
 Reels are stepped by an explicit `setTime(t)` rather than `requestAnimationFrame`
 or the wall clock, so a render is reproducible frame-for-frame.

@@ -72,16 +72,69 @@
       rgba(255,255,255,.42) 85%, rgba(255,255,255,0));
   }
   .strip { position:absolute; left:0; width:100%; will-change:transform; }
+
+  /* impact bloom across the whole panel, fired on launch and on each stop */
+  #flash {
+    position:absolute; inset:0; border-radius:var(--rad); pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 50%,
+      rgba(255,255,255,.62), rgba(255,255,255,.20) 52%, rgba(255,255,255,0) 80%);
+    mix-blend-mode:screen; opacity:0;
+  }
+
+  /* per-reel light sweep that runs down the cell as the detent catches */
+  #sweeps { position:absolute; inset:0; display:flex; pointer-events:none; z-index:3; }
+  .sweep { position:relative; flex:1 1 0; overflow:hidden; }
+  .sweep i {
+    position:absolute; left:-10%; width:120%; height:46%; display:block;
+    background:linear-gradient(180deg,
+      rgba(255,255,255,0), rgba(255,255,255,.55) 48%, rgba(255,255,255,0));
+    mix-blend-mode:screen; opacity:0;
+  }
+
+  /* the mimed slot handle */
+  #lever { position:absolute; inset:0; width:100%; height:100%;
+           pointer-events:none; overflow:visible; }
+  #leverG { opacity:0; }
   .cell  { width:100%; display:flex; align-items:center; justify-content:center; }
   .cell img { width:100%; height:100%; object-fit:contain; display:block; }
 </style>
 
 <div id="stage">
   <img id="plate" src="">
+  <svg id="lever" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="rodg" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0"   stop-color="#ffffff" stop-opacity=".18"/>
+        <stop offset=".34" stop-color="#ffffff" stop-opacity=".78"/>
+        <stop offset=".62" stop-color="#ffffff" stop-opacity=".30"/>
+        <stop offset="1"   stop-color="#ffffff" stop-opacity=".10"/>
+      </linearGradient>
+      <radialGradient id="knobg" cx=".36" cy=".30" r=".78">
+        <stop offset="0"   stop-color="#ffffff" stop-opacity=".95"/>
+        <stop offset=".34" stop-color="#ffffff" stop-opacity=".40"/>
+        <stop offset=".72" stop-color="#ffffff" stop-opacity=".14"/>
+        <stop offset="1"   stop-color="#ffffff" stop-opacity=".30"/>
+      </radialGradient>
+      <filter id="lglow" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g id="leverG" filter="url(#lglow)">
+      <g id="mount"></g>
+      <path id="rodOuter" stroke="rgba(255,255,255,.26)" fill="none" stroke-linecap="round"/>
+      <path id="rodCore"  stroke="rgba(255,255,255,.88)" fill="none" stroke-linecap="round"/>
+      <circle id="knobHalo" fill="#fff" opacity=".22"/>
+      <circle id="knob" fill="url(#knobg)" stroke="rgba(255,255,255,.75)"/>
+      <circle id="knobLip" fill="none" stroke="rgba(255,255,255,.34)"/>
+    </g>
+  </svg>
   <div id="panel">
     <div id="reels"></div>
+    <div id="sweeps"></div>
     <div id="spec"></div>
     <div id="rim"></div>
+    <div id="flash"></div>
   </div>
 </div>
 

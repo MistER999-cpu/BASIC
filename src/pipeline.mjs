@@ -18,6 +18,19 @@ const ff  = (...a) => execFileSync('ffmpeg', ['-hide_banner','-loglevel','error'
 
 const { width:W, height:H, fps, subframes, duration, crf } = cfg.output;
 
+/* Placeholders must never reach a render unnoticed - they look plausible at
+   reel size and that is exactly how a stand-in ships by mistake. */
+if (existsSync('assets/products/.STANDIN')) {
+  console.warn('\n  ####################################################################');
+  console.warn('  #  PLACEHOLDER PRODUCTS - these are NOT the real garments.         #');
+  console.warn('  #  Replace them:  python3 tools/cutout.py --outdir assets/products #');
+  console.warn('  #      white=<file> black=<file> brown=<file>                      #');
+  console.warn('  ####################################################################\n');
+  if (!has('--allow-standins')) {
+    throw new Error('refusing to render with placeholder products; pass --allow-standins to override');
+  }
+}
+
 /* ---- 1. base plate ------------------------------------------------------ */
 rmSync('out/plate', { recursive: true, force: true });
 mkdirSync('out/plate', { recursive: true });

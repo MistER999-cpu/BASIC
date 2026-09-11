@@ -14,7 +14,7 @@ the backdrop as the backdrop itself, so filling inward from the border leaks
 into the garment; the smoothed field stays elevated inside the product even
 where local colour matches, and flat near zero on true backdrop.
 """
-import subprocess, sys, re
+import subprocess, sys, re, os
 import numpy as np
 from scipy import ndimage
 
@@ -140,6 +140,9 @@ def main():
     for name, (rgb, alpha) in mattes.items():
         dst = f'{outdir}/{name}.png'
         write_rgba(dst, np.dstack([rgb[y0:y1, x0:x1], alpha[y0:y1, x0:x1] * 255]))
+    marker = os.path.join(outdir, '.STANDIN')
+    if os.path.exists(marker):
+        os.remove(marker)
     print(f'\n  shared crop {x1-x0}x{y1-y0} -> {outdir}/  ({len(mattes)} files)')
 
 

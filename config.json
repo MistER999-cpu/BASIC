@@ -27,9 +27,9 @@
   ],
   "panel": {
     "cx": 0.5,
-    "cy": 0.44,
+    "cy": 0.5,
     "w": 0.82,
-    "h": 0.285,
+    "h": 0.27,
     "radius": 62,
     "blur": 26,
     "saturate": 1.35,
@@ -65,12 +65,40 @@
       0.1,
       0.45
     ],
-    "spinStart": 2.72,
+    "spinStart": 3.04,
     "reelStops": [
       6.56,
       7.7,
       8.44
+    ],
+    "leverIn": [
+      1.55,
+      1.98
+    ],
+    "leverPull": [
+      2.5,
+      3.04
+    ],
+    "leverOut": [
+      3.1,
+      3.52
     ]
   },
-  "_timing_note": "Every value in timeline is an onset detected in the source audio: intro hit cluster 0.12/0.28/0.41, spin hit 2.72, stops 6.56/7.70/8.44. Re-run tools/onsets.mjs if the audio changes."
+  "_timing_note": "Timeline is locked to onsets in the source audio and to the model's mimed handle pull: she reaches ~1.8s, grips ~2.1-2.5s, pulls down 2.5-3.0s, and the 3.042s onset (strength 0.881) is the lever bottoming out - that launches the reels. Stops sit on the 6.56 / 7.70 / 8.44 onsets. Re-run tools/onsets.py if audio changes.",
+  "lever": {
+    "file": "assets/lever.json",
+    "knobR": 0.026,
+    "pivotOverride": {
+      "x": 0.09,
+      "y": 0.635
+    }
+  },
+  "fx": {
+    "launchFlash": 0.3,
+    "launchGain": 0.32,
+    "stopFlash": 0.2,
+    "stopGain": 0.26,
+    "shakePx": 4,
+    "sweepDur": 0.42
+  }
 }

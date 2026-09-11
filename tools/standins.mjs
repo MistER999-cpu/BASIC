@@ -2,7 +2,7 @@
    shoulder, straight hem), rendered on a grey backdrop so they double as a
    test fixture for tools/cutout.py. Delete once the real cutouts are in. */
 import { launch } from '../src/browser.mjs';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const COLORS = [
   ['white', '#fbf8f4', '#f2ece5', '#e6ded4'],
@@ -64,3 +64,7 @@ for (const [name, light, mid, dark] of COLORS) {
   console.log(`  out/standin/${name}.jpg`);
 }
 await browser.close();
+// marker so a render can never silently ship placeholders as the product
+writeFileSync('assets/products/.STANDIN',
+  'Placeholder products are in place. tools/cutout.py removes this file.\n');
+console.log('\n  NOTE: these are placeholders, not the real product.');
