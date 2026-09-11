@@ -1,0 +1,116 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "subframes": 4,
+    "duration": 15.0,
+    "crf": 17
+  },
+  "base": {
+    "video": "assets/base/base.mp4",
+    "fit": "cover"
+  },
+  "brand": {
+    "wordmark": "YOUR BRAND",
+    "wordmarkLetterSpacing": 0.22,
+    "endCardBg": "#000000",
+    "endCardFg": "#ffffff"
+  },
+  "products": [
+    {
+      "src": "assets/products/tank-01.svg",
+      "name": "Lilac"
+    },
+    {
+      "src": "assets/products/tank-02.svg",
+      "name": "Cream"
+    },
+    {
+      "src": "assets/products/tank-03.svg",
+      "name": "Sage"
+    },
+    {
+      "src": "assets/products/tank-04.svg",
+      "name": "Rust"
+    },
+    {
+      "src": "assets/products/tank-05.svg",
+      "name": "Magenta"
+    },
+    {
+      "src": "assets/products/tank-06.svg",
+      "name": "Ink"
+    },
+    {
+      "src": "assets/products/tank-07.svg",
+      "name": "Tan"
+    },
+    {
+      "src": "assets/products/tank-08.svg",
+      "name": "Violet"
+    }
+  ],
+  "winner": 2,
+  "panel": {
+    "cx": 0.503,
+    "cy": 0.546,
+    "w": 0.82,
+    "h": 0.3,
+    "radius": 62,
+    "blur": 26,
+    "saturate": 1.35,
+    "brightness": 1.05,
+    "tint": 0.055,
+    "rimDisplace": 18,
+    "liquidFreq": 0.01,
+    "liquidAmp": 9
+  },
+  "reels": {
+    "count": 3,
+    "cellScale": 0.8,
+    "loops": [
+      5,
+      7,
+      9
+    ],
+    "cellHeight": 0.82
+  },
+  "timeline": {
+    "wordmarkOut": [
+      1.3,
+      2.05
+    ],
+    "spinStart": 2.55,
+    "reelStops": [
+      6.6,
+      7.65,
+      8.7
+    ],
+    "panelOut": [
+      9.55,
+      10.25
+    ],
+    "heroIn": [
+      9.85,
+      10.75
+    ],
+    "heroHold": 11.15,
+    "packshot": [
+      11.4,
+      13.05
+    ],
+    "endCard": [
+      13.2,
+      15.0
+    ],
+    "heroOut": [
+      11.15,
+      11.4
+    ]
+  },
+  "hero": {
+    "w": 0.4,
+    "cy": 0.555
+  }
+}

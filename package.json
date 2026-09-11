@@ -1,0 +1,27 @@
+{
+  "name": "liquid-glass-slot",
+  "version": "1.0.0",
+  "description": "Liquid-glass slot-machine product reveal, composited onto vertical video",
+  "scripts": {
+    "render": "node src/pipeline.mjs",
+    "preview": "node tools/preview.mjs",
+    "verify": "node tools/verify.mjs",
+    "products": "node tools/scan-products.mjs",
+    "placeholders": "node tools/make-placeholders.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MistER999-cpu/BASIC.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MistER999-cpu/BASIC/issues"
+  },
+  "homepage": "https://github.com/MistER999-cpu/BASIC#readme",
+  "dependencies": {
+    "playwright-core": "^1.63.0"
+  },
+  "private": true,
+  "type": "module"
+}
