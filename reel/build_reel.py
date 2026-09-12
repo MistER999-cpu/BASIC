@@ -40,22 +40,33 @@ SHOTS = [(1, 31), (32, 62), (63, 93), (94, 124), (125, 155),
 NFRAMES = 278
 CUT_PERIOD = 31.0                  # frames between cuts (measured: 30-31)
 
-# strip order - alternates light and dark so the train reads as a rhythm
-ORDER = ['black', 'beige', 'brown', 'white']
+# What the model is wearing in each of the nine shots. The strip is built from
+# this, not from a generic repeat: the garment that arrives behind her on a cut
+# is the colourway of the shot that cut starts, so the garment passing behind
+# her IS the change. Shot 1 is already beige, which is why she is "already
+# wearing it" when the first one lands.
+SHOT_COLOURS = ['beige', 'beige', 'black', 'brown', 'brown',
+                'white', 'beige', 'black', 'white']
+PALETTE = ['beige', 'black', 'brown', 'white']
+
+
+def colour_for(k):
+    """Garment k arrives on the cut into shot k+2, so it wears that shot's colour."""
+    return SHOT_COLOURS[(k + 1) % len(SHOT_COLOURS)]
 
 
 def load_garments(scale, soften=0.0, products='assets/products'):
     """Load the cutouts, trim to their alpha bbox, scale to a common height."""
     raw = {}
-    for name in ORDER:
+    for name in PALETTE:
         im = Image.open(os.path.join(products, name + '.png')).convert('RGBA')
         a = np.asarray(im)[:, :, 3]
         ys, xs = np.where(a > 8)
         raw[name] = im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     # all four cutouts are the same garment shot identically, so one uniform
     # scale keeps their relative sizes true
-    out = []
-    for name in ORDER:
+    out = {}
+    for name in PALETTE:
         im = raw[name]
         nw = max(1, int(round(im.size[0] * scale)))
         nh = max(1, int(round(im.size[1] * scale)))
@@ -68,7 +79,7 @@ def load_garments(scale, soften=0.0, products='assets/products'):
             for c in range(4):
                 a[:, :, c] = ndimage.gaussian_filter(a[:, :, c], soften)
             sprite = Image.fromarray(a.round().clip(0, 255).astype(np.uint8), 'RGBA')
-        out.append((name, sprite))
+        out[name] = sprite
     return out
 
 
@@ -85,7 +96,7 @@ def build_strip(frame, garments, pitch, band_cy):
     """RGBA layer holding the whole train at this frame."""
     layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     for k, cx in garment_positions(frame, pitch):
-        name, im = garments[k % len(garments)]
+        im = garments[colour_for(k)]
         x = int(round(cx - im.size[0] / 2))
         y = int(round(band_cy - im.size[1] / 2))
         if x > W or x + im.size[0] < 0:
@@ -154,12 +165,13 @@ def main():
     args = ap.parse_args()
 
     garments = load_garments(args.scale, args.soften)
-    gw = garments[0][1].size[0]
+    gw = garments[PALETTE[0]].size[0]
     pitch = args.pitch if args.pitch else gw * 1.35
     band_cy = args.band * H
     speed = pitch / CUT_PERIOD                       # px per frame
     print("garment %dx%d px  pitch %.0f px  speed %.1f px/frame = %.0f px/s (%.1f%% width/s)"
-          % (gw, garments[0][1].size[1], pitch, speed, speed * FPS, speed * FPS / W * 100))
+          % (gw, garments[PALETTE[0]].size[1], pitch, speed, speed * FPS, speed * FPS / W * 100))
+    print("strip order at the cuts: " + " -> ".join(colour_for(k) for k in range(-1, 8)))
 
     alphas = [np.asarray(Image.open(os.path.join(args.mattes, 'shot%d_alpha.png' % i))
                          .convert('L')).astype(np.float32)[:, :, None] / 255.0
