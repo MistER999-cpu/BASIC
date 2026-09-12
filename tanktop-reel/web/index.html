@@ -1,0 +1,343 @@
+<title>Colourway Reel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#EFE9E1;
+    --surface:#F8F5F0;
+    --ink:#2B2521;
+    --muted:#8C8077;
+    --accent:#8E7264;
+    --rule:#DED4C9;
+    --shadow:rgba(70,52,40,.13);
+    /* the artboard is a product render — it holds its own colour in both themes */
+    --stage:#F4EFE9;
+    --stage-shadow:rgba(120,100,84,.34);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#17130F;
+      --surface:#221D18;
+      --ink:#EDE5DC;
+      --muted:#9C8F84;
+      --accent:#C39B87;
+      --rule:#352C25;
+      --shadow:rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#17130F;
+    --surface:#221D18;
+    --ink:#EDE5DC;
+    --muted:#9C8F84;
+    --accent:#C39B87;
+    --rule:#352C25;
+    --shadow:rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    padding-inline:20px;
+    padding-block:36px 60px;
+    margin:0;
+  }
+  .wrap{max-width:1140px;margin:0 auto}
+
+  header{margin-bottom:30px}
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 8px;
+  }
+  h1{
+    font-size:clamp(28px,4.4vw,40px);font-weight:700;letter-spacing:-.02em;
+    margin:0 0 10px;text-wrap:balance;
+  }
+  .lede{color:var(--muted);max-width:62ch;margin:0}
+
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start}
+  @media(max-width:900px){.split{grid-template-columns:1fr;gap:36px}}
+
+  /* ---------------- stage ---------------- */
+  .stage{width:100%;overflow:hidden;border-radius:6px;box-shadow:0 18px 46px var(--shadow)}
+  .reel{
+    width:1080px;height:1920px;background:var(--stage);
+    transform-origin:top left;position:relative;
+  }
+  .hero{
+    position:absolute;left:90px;top:190px;width:900px;height:1125px;
+    border-radius:18px;overflow:hidden;will-change:transform;
+    box-shadow:0 26px 52px var(--stage-shadow);
+  }
+  .hero img{width:100%;height:100%;display:block;object-fit:cover}
+  .strip{position:absolute;left:90px;top:1420px;width:900px;height:248px}
+  .thumb{
+    position:absolute;top:0;width:198px;height:248px;border-radius:10px;
+    overflow:hidden;will-change:transform;cursor:pointer;
+    background:var(--stage);border:0;padding:0;
+  }
+  .thumb img{width:100%;height:100%;display:block;object-fit:cover}
+  .ring{
+    position:absolute;border:3px solid var(--accent);border-radius:15px;
+    pointer-events:none;opacity:0;
+  }
+
+  /* ---------------- panel ---------------- */
+  h2{
+    font-size:12px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 14px;
+  }
+  section + section{margin-top:34px}
+
+  .spec{width:100%;border-collapse:collapse;font-size:14px}
+  .spec th,.spec td{text-align:left;padding:9px 0;border-bottom:1px solid var(--rule);vertical-align:baseline}
+  .spec th{font-weight:500;color:var(--muted);width:48%}
+  .spec td{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:13px}
+
+  .ctl{display:grid;gap:20px}
+  .row label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:7px}
+  .row .name{font-weight:500}
+  .row .val{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;color:var(--accent);
+  }
+  input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+  .hint{font-size:12.5px;color:var(--muted);margin:5px 0 0}
+
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  button.act{
+    font-family:inherit;font-size:13px;font-weight:500;color:var(--ink);
+    background:var(--surface);border:1px solid var(--rule);border-radius:7px;
+    padding:9px 16px;cursor:pointer;
+  }
+  button.act:hover{border-color:var(--accent)}
+  button.act:focus-visible,.thumb:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  pre.readout{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;line-height:1.75;
+    background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+    padding:16px;margin:0;overflow-x:auto;color:var(--ink);
+  }
+  .note{font-size:13px;color:var(--muted);margin:14px 0 0;max-width:58ch}
+  .note b{color:var(--ink);font-weight:600}
+  code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.92em;color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Sleeveless mock-neck · 4 colourways</p>
+    <h1>Colourway Reel</h1>
+    <p class="lede">The reference sunglasses animation, rebuilt for the tank tops. Hard cuts on the beat, a continuous hover on the hero card, a lift-and-shift settle on every change. Move the sliders to find the timing you want.</p>
+  </header>
+
+  <div class="split">
+    <div>
+      <div class="stage" id="stage">
+        <div class="reel" id="reel">
+          <div class="hero" id="hero"><img id="heroImg" alt="Tank top colourway"></div>
+          <div class="strip" id="strip"></div>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="act" id="play">Pause</button>
+        <button class="act" id="reset">Reset to reference</button>
+      </div>
+      <p class="note">Click any swatch to jump to it. The artboard keeps its cream ground in both light and dark — it's a product render, not page chrome.</p>
+    </div>
+
+    <div>
+      <section>
+        <h2>Measured from the reference</h2>
+        <table class="spec">
+          <tr><th>Source</th><td>720×1280 · 30fps · 8.01s</td></tr>
+          <tr><th>Cut interval</th><td>20 frames · 0.667s</td></tr>
+          <tr><th>Transition</th><td>hard cut — 0 blend frames</td></tr>
+          <tr><th>Intra-shot motion</th><td>0.000 px drift</td></tr>
+          <tr><th>Structure</th><td>4 images × 3 cycles</td></tr>
+          <tr><th>Active swatch border</th><td>#8E7264</td></tr>
+        </table>
+        <p class="note">Your four stills carry a backdrop drift of <code>rgb(164,151,143)</code> on the black shot against <code>rgb(139,126,116)</code> on the ivory. Butted full-bleed that steps visibly on the cut — which is why each photo sits as a card on a canvas here, exactly as the product shots do in the reference.</p>
+      </section>
+
+      <section>
+        <h2>Timing</h2>
+        <div class="ctl">
+          <div class="row">
+            <label for="hold"><span class="name">Hold per image</span><span class="val" id="holdV"></span></label>
+            <input type="range" id="hold" min="10" max="40" step="1" value="20">
+            <p class="hint">The reference sits at 20 frames — 90 BPM. Cuts land on the beat of most house and R&amp;B tracks.</p>
+          </div>
+          <div class="row">
+            <label for="settle"><span class="name">Lift &amp; shift settle</span><span class="val" id="settleV"></span></label>
+            <input type="range" id="settle" min="0" max="18" step="1" value="9">
+            <p class="hint">How long the card takes to rise and slide into place after the swap. The swap itself stays instant — set this to 0 for a pure reference cut.</p>
+          </div>
+          <div class="row">
+            <label for="hover"><span class="name">Hover amplitude</span><span class="val" id="hoverV"></span></label>
+            <input type="range" id="hover" min="0" max="18" step="1" value="7">
+            <p class="hint">Continuous float, on a 3.2s period that deliberately doesn't divide into the cut — so it never looks like it's looping.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Current spec</h2>
+        <pre class="readout" id="readout"></pre>
+        <p class="note">Send me these numbers and I'll re-render the <b>1080×1920</b> master to match.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var FPS = 30, CYCLES = 3;
+  var SHOTS = [
+    {src:"black.jpg", name:"Black"},
+    {src:"sand.jpg",  name:"Sand"},
+    {src:"ivory.jpg", name:"Ivory"},
+    {src:"brown.jpg", name:"Brown"}
+  ];
+  var ENTER_DX = 12, ENTER_DY = 16, ENTER_SCALE = 0.985;
+  var FLOAT_PER_Y = 3.2, FLOAT_AMP_S = 0.004, FLOAT_PER_S = 4.7;
+  var THUMB_LIFT = 8, THUMB_SCALE = 1.05, THUMB_DIM = 0.72;
+  var THUMB_W = 198, THUMB_GAP = 36;
+
+  var hold = 20, settle = 9, hoverAmp = 7;
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var reel = document.getElementById("reel");
+  var stage = document.getElementById("stage");
+  var hero = document.getElementById("hero");
+  var heroImg = document.getElementById("heroImg");
+  var strip = document.getElementById("strip");
+  var readout = document.getElementById("readout");
+
+  // ---- build the swatch strip
+  var thumbs = [], rings = [];
+  SHOTS.forEach(function(s, i){
+    var b = document.createElement("button");
+    b.className = "thumb";
+    b.style.left = (i * (THUMB_W + THUMB_GAP)) + "px";
+    b.setAttribute("aria-label", "Show " + s.name);
+    var im = document.createElement("img");
+    im.src = s.src; im.alt = s.name + " tank top";
+    b.appendChild(im);
+    b.addEventListener("click", function(){ jumpTo(i); });
+    strip.appendChild(b);
+    thumbs.push(b);
+
+    var r = document.createElement("div");
+    r.className = "ring";
+    rings.push(r);
+    strip.appendChild(r);
+  });
+
+  // ---- fit the 1080x1920 artboard to its column
+  function fit(){
+    var k = stage.clientWidth / 1080;
+    reel.style.transform = "scale(" + k + ")";
+    stage.style.height = (1920 * k) + "px";
+  }
+  addEventListener("resize", fit);
+
+  // ---- playback
+  var t0 = performance.now(), paused = false, pausedAt = 0, shown = -1;
+
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+  function draw(now){
+    var t = (paused ? pausedAt : (now - t0)) / 1000;
+    var total = hold * SHOTS.length * CYCLES;
+    var f = Math.floor(t * FPS) % total;
+    var idx = Math.floor(f / hold) % SHOTS.length;
+    var k = f % hold;
+
+    // hard cut: the pixels change on one frame, nothing blends
+    if (idx !== shown){ heroImg.src = SHOTS[idx].src; shown = idx; }
+
+    var s = (settle > 0 && k < settle && !reduce) ? 1 - easeOutCubic(k / settle) : 0;
+    var amp = reduce ? 0 : hoverAmp;
+    var fy = amp * Math.sin(2 * Math.PI * t / FLOAT_PER_Y);
+    var fs = reduce ? 1 : 1 + FLOAT_AMP_S * Math.sin(2 * Math.PI * t / FLOAT_PER_S + 1.1);
+
+    var dx = ENTER_DX * s;
+    var dy = ENTER_DY * s + fy;
+    var sc = (ENTER_SCALE + (1 - ENTER_SCALE) * (1 - s)) * fs;
+    hero.style.transform = "translate(" + dx.toFixed(2) + "px," + dy.toFixed(2) + "px) scale(" + sc.toFixed(4) + ")";
+
+    var lift = (amp - fy) / (2 * amp || 1);
+    hero.style.boxShadow = "0 " + (22 + 12 * lift).toFixed(0) + "px " +
+                           (44 + 20 * lift).toFixed(0) + "px var(--stage-shadow)";
+
+    var prev = (idx - 1 + SHOTS.length) % SHOTS.length;
+    for (var i = 0; i < SHOTS.length; i++){
+      var a = (i === idx) ? 1 - s : (i === prev ? s : 0);
+      var ty = -THUMB_LIFT * a, tsc = 1 + (THUMB_SCALE - 1) * a;
+      thumbs[i].style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + tsc.toFixed(4) + ")";
+      thumbs[i].style.opacity = (THUMB_DIM + (1 - THUMB_DIM) * a).toFixed(3);
+
+      var w = THUMB_W * tsc, h = 248 * tsc, pad = 7;
+      var lx = i * (THUMB_W + THUMB_GAP) + (THUMB_W - w) / 2;
+      var ly = (248 - h) / 2 + ty;
+      var r = rings[i];
+      r.style.opacity = a.toFixed(3);
+      r.style.left = (lx - pad) + "px"; r.style.top = (ly - pad) + "px";
+      r.style.width = (w + pad * 2) + "px"; r.style.height = (h + pad * 2) + "px";
+    }
+    requestAnimationFrame(draw);
+  }
+
+  function jumpTo(i){
+    var target = i * hold / FPS;
+    t0 = performance.now() - target * 1000;
+    if (paused) pausedAt = target * 1000;
+  }
+
+  // ---- controls
+  function sync(){
+    var cycle = hold * SHOTS.length / FPS;
+    document.getElementById("holdV").textContent   = hold + " fr · " + (hold / FPS).toFixed(3) + "s";
+    document.getElementById("settleV").textContent = settle + " fr · " + (settle / FPS).toFixed(3) + "s";
+    document.getElementById("hoverV").textContent  = hoverAmp + " px";
+    readout.textContent =
+      "fps            " + FPS + "\n" +
+      "hold           " + hold + " frames  (" + (hold / FPS).toFixed(4) + "s)\n" +
+      "settle         " + settle + " frames  (" + (settle / FPS).toFixed(4) + "s)\n" +
+      "hover          " + hoverAmp + " px / " + FLOAT_PER_Y + "s\n" +
+      "cycle          " + cycle.toFixed(4) + "s\n" +
+      "cycles         " + CYCLES + "\n" +
+      "duration       " + (cycle * CYCLES).toFixed(3) + "s  (" + (hold * 4 * CYCLES) + " frames)\n" +
+      "order          " + SHOTS.map(function(s){ return s.name; }).join(" → ") + "\n" +
+      "transition     hard cut\n" +
+      "border         #8E7264";
+  }
+  function bind(id, set){
+    var el = document.getElementById(id);
+    el.addEventListener("input", function(){ set(+el.value); sync(); });
+  }
+  bind("hold",   function(v){ hold = v; });
+  bind("settle", function(v){ settle = v; });
+  bind("hover",  function(v){ hoverAmp = v; });
+
+  document.getElementById("play").addEventListener("click", function(){
+    paused = !paused;
+    if (paused){ pausedAt = performance.now() - t0; }
+    else { t0 = performance.now() - pausedAt; }
+    this.textContent = paused ? "Play" : "Pause";
+  });
+  document.getElementById("reset").addEventListener("click", function(){
+    hold = 20; settle = 9; hoverAmp = 7;
+    document.getElementById("hold").value = 20;
+    document.getElementById("settle").value = 9;
+    document.getElementById("hover").value = 7;
+    sync();
+  });
+
+  fit(); sync(); requestAnimationFrame(draw);
+})();
+</script>
