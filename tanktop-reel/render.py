@@ -11,7 +11,7 @@ Added per brief: a continuous hover on the hero card, and a lift/shift
 settle on each change. The image SWAP stays instantaneous -- only the
 card's position reacts, so the cut stays hard.
 """
-import math, os
+import math, os, sys
 from PIL import Image, ImageDraw, ImageFilter
 
 # ----------------------------------------------------------------- timing
@@ -48,18 +48,36 @@ THUMB_LIFT    = 8.0          # active thumb rises
 THUMB_SCALE   = 1.05
 THUMB_DIM     = 0.72         # inactive opacity
 
-# ----------------------------------------------------------------- source
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
-# (file, crop_top) -- crop window is 1080x1350 out of the 1080x1920 source
-ORDER = [
-    ("black.jpg",  60),   # widest  -- raised arm
-    ("sand.jpg",   80),   # medium  -- back turn
-    ("ivory.jpg", 220),   # tightest-- macro, crossed arms
-    ("brown.jpg", 100),   # medium  -- hand at collarbone
-]
+# ----------------------------------------------------------------- sources
+# Each shot: (file, crop_top, white_balance_gains).
+# crop_top picks the 1080x1350 window out of the 1080x1920 still.
+# The gains correct a backdrop that drifts away from the rest of its set --
+# None means the still is used as shot.
+SETS = {
+    "women": [
+        ("black.jpg",  60, None),   # widest   -- raised arm
+        ("sand.jpg",   80, None),   # medium   -- back turn
+        ("ivory.jpg", 220, None),   # tightest -- macro, crossed arms
+        ("brown.jpg", 100, None),   # medium   -- hand at collarbone
+    ],
+    "hijabi": [
+        ("black.jpg", 170, None),   # widest   -- both hands holding the shirt open
+        ("sand.jpg",  230, None),   # medium   -- suede jacket off one shoulder
+        # this still was shot on a cooler grey ground than the other three;
+        # pulled 70% of the way back to the set's warmth
+        ("ivory.jpg", 200, (1.071, 1.0, 0.905)),
+        ("brown.jpg", 140, None),   # medium   -- bomber swept back
+    ],
+}
+
+SET_NAME = sys.argv[1] if len(sys.argv) > 1 else "women"
+if SET_NAME not in SETS:
+    raise SystemExit("unknown set %r -- choose from %s" % (SET_NAME, ", ".join(SETS)))
+ORDER = SETS[SET_NAME]
+SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", SET_NAME)
 CROP_H = 1350
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frames")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frames", SET_NAME)
 
 
 def ease_out_cubic(t):
@@ -76,9 +94,12 @@ def rounded_mask(size, radius):
 def load_cards():
     """Crop each source to 4:5 and pre-render hero + thumb base sizes."""
     heroes, thumbs = [], []
-    for fname, top in ORDER:
+    for fname, top, gains in ORDER:
         im = Image.open(os.path.join(SRC, fname)).convert("RGB")
         im = im.crop((0, top, W, top + CROP_H))
+        if gains:
+            im = Image.merge("RGB", [ch.point(lambda p, g=g: min(255, int(p * g)))
+                                     for ch, g in zip(im.split(), gains)])
         heroes.append(im)
         thumbs.append(im.resize((THUMB_W, THUMB_H), Image.LANCZOS))
     return heroes, thumbs
@@ -165,7 +186,7 @@ def main():
 
         canvas.save(os.path.join(OUT, "f%04d.png" % f))
 
-    print("rendered %d frames -> %s" % (total, OUT))
+    print("rendered %d frames of set %r -> %s" % (total, SET_NAME, OUT))
 
 
 if __name__ == "__main__":

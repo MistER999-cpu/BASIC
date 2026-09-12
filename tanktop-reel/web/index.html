@@ -108,6 +108,14 @@
   input[type=range]{width:100%;accent-color:var(--accent);margin:0}
   .hint{font-size:12.5px;color:var(--muted);margin:5px 0 0}
 
+  .setbar{display:flex;gap:6px;margin-bottom:14px}
+  .set{
+    font-family:inherit;font-size:13px;font-weight:500;color:var(--muted);
+    background:transparent;border:1px solid var(--rule);border-radius:7px;
+    padding:8px 16px;cursor:pointer;
+  }
+  .set.is-on{color:var(--ink);border-color:var(--accent);background:var(--surface)}
+  .set:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
   button.act{
     font-family:inherit;font-size:13px;font-weight:500;color:var(--ink);
@@ -129,13 +137,17 @@
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">Sleeveless mock-neck · 4 colourways</p>
+    <p class="eyebrow">Sleeveless mock-neck · 4 colourways · 2 reels</p>
     <h1>Colourway Reel</h1>
-    <p class="lede">The reference sunglasses animation, rebuilt for the tank tops. Hard cuts on the beat, a continuous hover on the hero card, a lift-and-shift settle on every change. Move the sliders to find the timing you want.</p>
+    <p class="lede">The reference sunglasses animation, rebuilt for the tank tops — in two cuts of the same campaign. Hard cuts on the beat, a continuous hover on the hero card, a lift-and-shift settle on every change. Both reels run one identical spec. Move the sliders to find the timing you want.</p>
   </header>
 
   <div class="split">
     <div>
+      <div class="setbar" role="group" aria-label="Choose a reel">
+        <button class="set is-on" data-set="women" id="set-women">Original</button>
+        <button class="set" data-set="hijabi" id="set-hijabi">Hijabi</button>
+      </div>
       <div class="stage" id="stage">
         <div class="reel" id="reel">
           <div class="hero" id="hero"><img id="heroImg" alt="Tank top colourway"></div>
@@ -146,7 +158,7 @@
         <button class="act" id="play">Pause</button>
         <button class="act" id="reset">Reset to reference</button>
       </div>
-      <p class="note">Click any swatch to jump to it. The artboard keeps its cream ground in both light and dark — it's a product render, not page chrome.</p>
+      <p class="note">Click any swatch to jump to it. Both reels share the canvas, the crop ratio and the timing, so they read as one campaign. The artboard keeps its cream ground in light and dark alike — it's a product render, not page chrome.</p>
     </div>
 
     <div>
@@ -160,7 +172,7 @@
           <tr><th>Structure</th><td>4 images × 3 cycles</td></tr>
           <tr><th>Active swatch border</th><td>#8E7264</td></tr>
         </table>
-        <p class="note">Your four stills carry a backdrop drift of <code>rgb(164,151,143)</code> on the black shot against <code>rgb(139,126,116)</code> on the ivory. Butted full-bleed that steps visibly on the cut — which is why each photo sits as a card on a canvas here, exactly as the product shots do in the reference.</p>
+        <p class="note">Both sets carry a backdrop drift between shots — <code>rgb(164,151,143)</code> against <code>rgb(139,126,116)</code> in the original, and a cool grey <code>rgb(141,138,142)</code> against a warm <code>rgb(145,126,107)</code> in the hijabi set. Butted full-bleed that steps visibly on every cut, which is why each photo sits as a card on a canvas. The hijabi macro is additionally pulled 70% of the way back toward its set's warmth.</p>
       </section>
 
       <section>
@@ -196,12 +208,11 @@
 <script>
 (function(){
   var FPS = 30, CYCLES = 3;
-  var SHOTS = [
-    {src:"black.jpg", name:"Black"},
-    {src:"sand.jpg",  name:"Sand"},
-    {src:"ivory.jpg", name:"Ivory"},
-    {src:"brown.jpg", name:"Brown"}
-  ];
+  var NAMES = ["Black", "Sand", "Ivory", "Brown"];
+  var FILES = ["black.jpg", "sand.jpg", "ivory.jpg", "brown.jpg"];
+  var setName = "women";
+  function srcFor(i){ return setName + "/" + FILES[i]; }
+  var SHOTS = NAMES.map(function(n){ return {name:n}; });
   var ENTER_DX = 12, ENTER_DY = 16, ENTER_SCALE = 0.985;
   var FLOAT_PER_Y = 3.2, FLOAT_AMP_S = 0.004, FLOAT_PER_S = 4.7;
   var THUMB_LIFT = 8, THUMB_SCALE = 1.05, THUMB_DIM = 0.72;
@@ -225,7 +236,7 @@
     b.style.left = (i * (THUMB_W + THUMB_GAP)) + "px";
     b.setAttribute("aria-label", "Show " + s.name);
     var im = document.createElement("img");
-    im.src = s.src; im.alt = s.name + " tank top";
+    im.src = srcFor(i); im.alt = s.name + " tank top";
     b.appendChild(im);
     b.addEventListener("click", function(){ jumpTo(i); });
     strip.appendChild(b);
@@ -258,7 +269,7 @@
     var k = f % hold;
 
     // hard cut: the pixels change on one frame, nothing blends
-    if (idx !== shown){ heroImg.src = SHOTS[idx].src; shown = idx; }
+    if (idx !== shown){ heroImg.src = srcFor(idx); shown = idx; }
 
     var s = (settle > 0 && k < settle && !reduce) ? 1 - easeOutCubic(k / settle) : 0;
     var amp = reduce ? 0 : hoverAmp;
@@ -312,7 +323,8 @@
       "cycle          " + cycle.toFixed(4) + "s\n" +
       "cycles         " + CYCLES + "\n" +
       "duration       " + (cycle * CYCLES).toFixed(3) + "s  (" + (hold * 4 * CYCLES) + " frames)\n" +
-      "order          " + SHOTS.map(function(s){ return s.name; }).join(" → ") + "\n" +
+      "set            " + setName + "\n" +
+      "order          " + NAMES.join(" → ") + "\n" +
       "transition     hard cut\n" +
       "border         #8E7264";
   }
@@ -323,6 +335,16 @@
   bind("hold",   function(v){ hold = v; });
   bind("settle", function(v){ settle = v; });
   bind("hover",  function(v){ hoverAmp = v; });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".set"), function(b){
+    b.addEventListener("click", function(){
+      setName = b.dataset.set;
+      document.querySelectorAll(".set").forEach(function(x){ x.classList.toggle("is-on", x === b); });
+      thumbs.forEach(function(t, i){ t.querySelector("img").src = srcFor(i); });
+      shown = -1;                       // force the hero to reload on the next frame
+      sync();
+    });
+  });
 
   document.getElementById("play").addEventListener("click", function(){
     paused = !paused;
