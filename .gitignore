@@ -6,3 +6,6 @@ assets/base/*
 # normalizer working output (delivery/ holds the kept set)
 frames_norm/
 frames_norm_bgonly/
+reel/stills*/
+reel/mattes/*_key.png
+reel/__pycache__/
