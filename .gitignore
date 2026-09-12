@@ -2,3 +2,7 @@ node_modules/
 out/
 assets/base/*
 !assets/base/.gitkeep
+
+# normalizer working output (delivery/ holds the kept set)
+frames_norm/
+frames_norm_bgonly/
