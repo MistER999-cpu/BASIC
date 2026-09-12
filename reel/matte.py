@@ -22,6 +22,10 @@ from scipy import ndimage
 MAX_HOLE_FRAC = 0.0008          # holes larger than this fraction stay open
 SUBJECT_MARGIN = 25          # clearance kept around the subject when
                              # estimating the backdrop; see model_matte
+BACKDROP_SPREAD = 0.06       # channel-ratio spread below which a pixel is
+BACKDROP_GAIN = 0.08         # backdrop lit differently, not an object
+COARSE_SIGMA = 220.0         # wide fallback radius for the backdrop estimate
+SUPPORT_FULL = 0.25          # support at which the tight estimate is trusted alone
 BG_SIGMA = 20.0                 # radius of the backdrop estimate; 80 bled the
                                 # cyc curve into the matte and reported the
                                 # whole floor as subject
@@ -48,16 +52,36 @@ def guided_filter(guide, p, r=8, eps=1e-4):
     return ndimage.uniform_filter(a, r) * guide + ndimage.uniform_filter(b, r)
 
 
-def smooth_background(img, bgmask, sigma=None):
+def smooth_background(img, bgmask, sigma=None, with_support=False):
     """Gaussian-weighted average over the pixels currently classed as backdrop."""
     if sigma is None:
         sigma = BG_SIGMA          # read at call time so callers can tune it
     m = bgmask.astype(np.float64)
-    den = np.maximum(ndimage.gaussian_filter(m, sigma), 1e-6)
+    support = ndimage.gaussian_filter(m, sigma)
+    den = np.maximum(support, 1e-6)
     out = np.empty_like(img)
     for c in range(3):
         out[:, :, c] = ndimage.gaussian_filter(img[:, :, c] * m, sigma) / den
-    return out
+    return (out, support) if with_support else out
+
+
+def two_scale_background(img, bgmask, fine=None, coarse=None):
+    """
+    Backdrop estimate that stays valid everywhere in the frame.
+
+    A single tight radius is accurate beside the subject but collapses deep
+    inside it, where there is no backdrop left to average - and a collapsed
+    estimate corrupts both the residual and the channel ratios exactly where
+    pale garments need judging. So the tight estimate is blended towards a wide
+    one as its support falls away: local accuracy at the silhouette, a defined
+    value everywhere else.
+    """
+    fine = BG_SIGMA if fine is None else fine
+    coarse = COARSE_SIGMA if coarse is None else coarse
+    near, support = smooth_background(img, bgmask, sigma=fine, with_support=True)
+    far = smooth_background(img, bgmask, sigma=coarse)
+    wgt = np.clip(support / SUPPORT_FULL, 0.0, 1.0)[:, :, None]
+    return near * wgt + far * (1.0 - wgt)
 
 
 def model_matte(img, iters=6, feather=0.0, soft=(25.0, 150.0)):
@@ -86,11 +110,11 @@ def model_matte(img, iters=6, feather=0.0, soft=(25.0, 150.0)):
         # edges. With the margin the estimate is flat (208 across the whole row)
         # and the edge lands within 2px of the truth.
         if first:
-            return smooth_background(img, mask)
+            return two_scale_background(img, mask)
         safe = ~ndimage.binary_dilation(~mask, np.ones((SUBJECT_MARGIN, SUBJECT_MARGIN)))
         if safe.sum() < 0.10 * h * w:
             safe = mask
-        return smooth_background(img, safe)
+        return two_scale_background(img, safe)
 
     bg = np.ones((h, w), bool)
     for i in range(iters):
@@ -106,6 +130,28 @@ def model_matte(img, iters=6, feather=0.0, soft=(25.0, 150.0)):
 
     surf = estimate(bg)
     resid = np.abs(img - surf).sum(2)
+
+    # Reject backdrop that is merely lit slightly differently. A pixel whose
+    # three channels are all scaled by nearly the same mild factor is the
+    # backdrop under a soft luminance modulation - a wall shadow or a lighting
+    # ripple - not an object, and the strip must pass in front of it. Without
+    # this, shot 5's wall shadow (ratios 0.95-1.07, spread 0.01-0.04, residual
+    # 20-35 against a threshold of 21) is swallowed into the silhouette.
+    #
+    # The margins are set against the real garments, which all clear them:
+    # black reads ratio 0.19, beige spread 0.19, the cream turtleneck mean 1.11.
+    # The test is only meaningful where the estimate has real backdrop to
+    # average. Deep inside the figure the masked blur has no support and its
+    # ratios are meaningless - applied there, it punched a hole through the
+    # pale cream trousers and hands of shot 6. Gating on support density keeps
+    # the test at the periphery, where a wall shadow lives, and away from the
+    # interior, where it can only do damage.
+    ratio = img / np.maximum(surf, 1.0)
+    spread = ratio.max(2) - ratio.min(2)
+    backdrop_like = ((spread < BACKDROP_SPREAD)
+                     & (np.abs(ratio.mean(2) - 1) < BACKDROP_GAIN))
+    bg = bg | backdrop_like
+    resid = np.where(backdrop_like, 0.0, resid)
 
     # the backdrop is the part connected to the frame edge
     lab, _ = ndimage.label(bg)

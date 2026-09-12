@@ -49,6 +49,9 @@ SHOT_COLOURS = ['beige', 'beige', 'black', 'brown', 'brown',
                 'white', 'beige', 'black', 'white']
 PALETTE = ['beige', 'black', 'brown', 'white']
 
+# One garment per cut, eight cuts. The train plays the sequence once and stops.
+N_GARMENTS = len(CUTS)
+
 
 def colour_for(k):
     """Garment k arrives on the cut into shot k+2, so it wears that shot's colour."""
@@ -84,12 +87,20 @@ def load_garments(scale, soften=0.0, products='assets/products'):
 
 
 def garment_positions(frame, pitch):
-    """(index, centre_x) for every garment overlapping the frame."""
-    # garment k is centred on the model at cut frame CUTS[0] + k*CUT_PERIOD
+    """
+    (index, centre_x) for every garment overlapping the frame.
+
+    The train is finite: one garment per cut and no more. k runs 0..7, so
+    nothing is sitting behind the model at frame 1, the sequence plays once,
+    and the strip empties from the right as it runs out. The reference film
+    does the same - its train is roughly ten pieces and the last shot is nearly
+    bare backdrop, which is what gives the clip its ending beat.
+    """
     t = (frame - CUTS[0]) / CUT_PERIOD
     lo = int(np.floor((0 - MODEL_CX) / pitch + t)) - 1
     hi = int(np.ceil((W - MODEL_CX) / pitch + t)) + 1
-    return [(k, MODEL_CX + pitch * (k - t)) for k in range(lo, hi + 1)]
+    return [(k, MODEL_CX + pitch * (k - t))
+            for k in range(max(lo, 0), min(hi, N_GARMENTS - 1) + 1)]
 
 
 def build_strip(frame, garments, pitch, band_cy):
@@ -171,7 +182,8 @@ def main():
     speed = pitch / CUT_PERIOD                       # px per frame
     print("garment %dx%d px  pitch %.0f px  speed %.1f px/frame = %.0f px/s (%.1f%% width/s)"
           % (gw, garments[PALETTE[0]].size[1], pitch, speed, speed * FPS, speed * FPS / W * 100))
-    print("strip order at the cuts: " + " -> ".join(colour_for(k) for k in range(-1, 8)))
+    print("strip: %d garments, arriving in order " % N_GARMENTS
+          + " -> ".join(colour_for(k) for k in range(N_GARMENTS)))
 
     alphas = [np.asarray(Image.open(os.path.join(args.mattes, 'shot%d_alpha.png' % i))
                          .convert('L')).astype(np.float32)[:, :, None] / 255.0
