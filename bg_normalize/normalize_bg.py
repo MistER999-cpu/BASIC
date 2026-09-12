@@ -2,25 +2,29 @@
 """
 Normalize the studio background across a set of fashion frames.
 
-Stage 1  build a subject mask per image (flood-fill from the borders through
-         the plain background, then tighten and feather)
-Stage 2  fit a smooth polynomial surface to the background-only pixels
-Stage 3  pick a master image; compute a smooth correction field
-         C = master_surface / source_surface  and apply it to the whole frame
-         (low-frequency, so the subject shifts imperceptibly and consistently
-         rather than being hard-swapped against a new background)
-Stage 4  optionally hard-replace the background outside the feathered mask
-         with the master surface plus matched grain, killing residual mottling
+The background is separated from the subject by iterative sigma-clipping
+against a fitted surface, so a frame whose backdrop carries a strong gradient
+(or whose subject is close to the backdrop in tone) still segments correctly.
+A smooth correction field derived from a master frame is then applied to the
+whole frame, carrying the subject into the master's light rather than
+compositing it against a new background.
 
 Usage:
-    python3 normalize_bg.py out_dir master.png other1.png other2.png ...
-    python3 normalize_bg.py --replace out_dir master.png other1.png ...
+    python3 normalize_bg.py OUT_DIR master.png other1.png other2.png ...
+    python3 normalize_bg.py --bg-only OUT_DIR master.png other1.png ...
+    python3 normalize_bg.py --replace OUT_DIR master.png other1.png ...
+
+--bg-only holds the subject at its original values and corrects only the
+backdrop. Use it when the subject carries product colour that must not move.
 """
 import sys, os
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
+from scipy import ndimage
 
 DEG = 3
+SUB = 4           # subsample stride for the least-squares fit
+
 
 def basis(X, Y, deg=DEG):
     t = [np.ones_like(X)]
@@ -29,67 +33,97 @@ def basis(X, Y, deg=DEG):
             t.append((X ** (i - j)) * (Y ** j))
     return np.stack([q.ravel() for q in t], 1)
 
-def subject_mask(img):
-    """True where the subject is. Flood-fill the plain background in from the borders."""
-    h, w, _ = img.shape
-    L = img.mean(2)
-    border = np.concatenate([L[0], L[-1], L[:, 0], L[:, -1]])
-    bg_lvl = np.median(border)
-    # background = close to the border level, in luminance AND not strongly coloured
-    sat = img.max(2) - img.min(2)
-    flat = (np.abs(L - bg_lvl) < 14) & (sat < 22)
-    # flood fill from the border through `flat` so interior look-alike patches
-    # (pale trousers, skin) are not mistaken for background
-    from collections import deque
-    reach = np.zeros((h, w), bool)
-    dq = deque()
-    for x in range(w):
-        for y in (0, h - 1):
-            if flat[y, x]: reach[y, x] = True; dq.append((y, x))
-    for y in range(h):
-        for x in (0, w - 1):
-            if flat[y, x]: reach[y, x] = True; dq.append((y, x))
-    while dq:
-        y, x = dq.popleft()
-        for dy, dx in ((1,0),(-1,0),(0,1),(0,-1)):
-            ny, nx = y + dy, x + dx
-            if 0 <= ny < h and 0 <= nx < w and flat[ny, nx] and not reach[ny, nx]:
-                reach[ny, nx] = True; dq.append((ny, nx))
-    subj = ~reach
-    # close small holes, then dilate a little so edge pixels and hair count as subject
-    m = Image.fromarray((subj * 255).astype(np.uint8))
-    m = m.filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MinFilter(5))
-    m = m.filter(ImageFilter.MaxFilter(9))
-    return np.asarray(m) > 127
+
+def _grid(h, w):
+    yy, xx = np.mgrid[0:h, 0:w]
+    return xx / w - 0.5, yy / h - 0.5
+
 
 def fit_surface(img, bgmask):
+    """Least-squares polynomial surface through the background pixels."""
     h, w, _ = img.shape
-    yy, xx = np.mgrid[0:h, 0:w]
-    X = xx / w - 0.5; Y = yy / h - 0.5
-    L = img.mean(2)
-    use = bgmask & (np.abs(L - np.median(L[bgmask])) < 10)
-    A = basis(X, Y)[use.ravel()]
-    full = basis(X, Y)
+    X, Y = _grid(h, w)
+    B = basis(X, Y)
+    sel = np.zeros((h, w), bool)
+    sel[::SUB, ::SUB] = True
+    sel &= bgmask
+    if sel.sum() < 200:                      # too few samples, use everything
+        sel = bgmask.copy()
+    rows = B[sel.ravel()]
     out = np.zeros_like(img, dtype=np.float64)
     for c in range(3):
-        coef, *_ = np.linalg.lstsq(A, img[:, :, c][use], rcond=None)
-        out[:, :, c] = (full @ coef).reshape(h, w)
+        coef, *_ = np.linalg.lstsq(rows, img[:, :, c][sel], rcond=None)
+        out[:, :, c] = (B @ coef).reshape(h, w)
     return out
 
-def report(name, surf):
+
+def subject_mask(img, iters=6):
+    """
+    True where the subject is.
+
+    Iteratively fits a surface to the current background estimate and clips
+    away pixels that sit too far from it. Because the surface models the
+    backdrop's own gradient, this works on frames where a fixed threshold
+    around the border tone would break apart.
+    """
+    h, w, _ = img.shape
+    bg = np.ones((h, w), bool)
+    for _ in range(iters):
+        surf = fit_surface(img, bg)
+        resid = np.abs(img - surf).sum(2)
+        rb = resid[bg]
+        med = np.median(rb)
+        mad = np.median(np.abs(rb - med)) * 1.4826
+        thr = med + max(3.0 * mad, 6.0)
+        new = resid < thr
+        if new.sum() < 0.04 * h * w:         # clipped too hard, keep previous
+            break
+        if (new == bg).all():
+            break
+        bg = new
+
+    # a real backdrop touches the frame edge; interior look-alike regions
+    # (pale trousers, skin) must not count as background
+    lab, _ = ndimage.label(bg)
+    edge = set(lab[0]) | set(lab[-1]) | set(lab[:, 0]) | set(lab[:, -1])
+    edge.discard(0)
+    if edge:
+        bg = np.isin(lab, list(edge))
+
+    subj = ~bg
+    subj = ndimage.binary_closing(subj, np.ones((5, 5)))
+    subj = ndimage.binary_fill_holes(subj)
+    subj = ndimage.binary_dilation(subj, np.ones((9, 9)))
+    return subj
+
+
+def stats(surf):
     h, w, _ = surf.shape
     L = surf.mean(2)
-    def hx(v): return '#%02X%02X%02X' % tuple(int(round(t)) for t in v)
-    corners = [L[20,20], L[20,-20], L[-20,20], L[-20,-20]]
-    print("  %-28s centre %s  lum %.1f-%.1f  spread %.1f  falloff %.2f%%" % (
-        name, hx(surf[h//2, w//2]), L.min(), L.max(), L.max()-L.min(),
-        (1 - np.mean(corners) / L[h//2, w//2]) * 100))
+    corners = [L[20, 20], L[20, -20], L[-20, 20], L[-20, -20]]
+    centre = L[h // 2, w // 2]
+    hexs = '#%02X%02X%02X' % tuple(int(round(t)) for t in surf[h // 2, w // 2])
+    return hexs, L.min(), L.max(), (1 - np.mean(corners) / centre) * 100
+
+
+def report(name, surf):
+    hexs, lo, hi, fall = stats(surf)
+    print("  %-26s centre %s  lum %6.1f-%6.1f  spread %5.1f  falloff %+.2f%%"
+          % (name[:26], hexs, lo, hi, hi - lo, fall))
+
 
 def main():
     args = sys.argv[1:]
     replace = False
-    if args and args[0] == '--replace':
-        replace = True; args = args[1:]
+    bg_only = False
+    while args and args[0].startswith('--'):
+        if args[0] == '--replace':
+            replace = True
+        elif args[0] == '--bg-only':
+            bg_only = True
+        else:
+            print("unknown flag %s" % args[0]); sys.exit(2)
+        args = args[1:]
     out_dir, paths = args[0], args[1:]
     os.makedirs(out_dir, exist_ok=True)
     rng = np.random.default_rng(11)
@@ -99,12 +133,17 @@ def main():
     for p in paths:
         a = np.asarray(Image.open(p).convert('RGB')).astype(np.float64)
         sm = subject_mask(a)
+        frac = sm.mean() * 100
+        if frac > 60:
+            print("  !! %s subject mask covers %.1f%% of frame - segmentation "
+                  "failed, refusing to correct this frame"
+                  % (os.path.basename(p), frac))
+            sys.exit(1)
         sf = fit_surface(a, ~sm)
         imgs.append(a); masks.append(sm); surfs.append(sf)
-        print("  %s  subject %.1f%% of frame" % (os.path.basename(p), sm.mean()*100))
+        print("  %-40s subject %5.1f%%" % (os.path.basename(p)[:40], frac))
         report(os.path.basename(p), sf)
 
-    # every image is resampled onto the master's surface geometry
     target = surfs[0]
     th, tw, _ = target.shape
     print("\nMASTER: %s" % os.path.basename(paths[0]))
@@ -114,30 +153,48 @@ def main():
         h, w, _ = a.shape
         tgt = target
         if (h, w) != (th, tw):
-            tgt = np.asarray(Image.fromarray(target.round().clip(0,255).astype(np.uint8))
+            tgt = np.asarray(Image.fromarray(target.round().clip(0, 255).astype(np.uint8))
                              .resize((w, h), Image.LANCZOS)).astype(np.float64)
-        C = tgt / np.maximum(sf, 1e-6)          # smooth, close to 1.0
-        outi = a * C
+        C = tgt / np.maximum(sf, 1e-6)
+        if not (0.4 < np.median(C) < 2.5):
+            print("  !! %s correction field out of range (median %.3f) - aborting"
+                  % (os.path.basename(p), np.median(C)))
+            sys.exit(1)
+        C = np.clip(C, 0.4, 2.5)
+        if bg_only:
+            # hold the subject at its original values and correct only the
+            # backdrop, so garment colour is not altered by the match
+            f = ndimage.gaussian_filter(sm.astype(np.float64), 2.0)[:, :, None]
+            C = C * (1.0 - f) + f
+        out = a * C
         if replace:
             grain = rng.normal(0, 2.8, (h, w, 1))
-            bg = tgt + grain
-            feather = np.asarray(Image.fromarray((sm*255).astype(np.uint8))
-                                 .filter(ImageFilter.GaussianBlur(1.5))).astype(np.float64)/255.
-            feather = feather[:, :, None]
-            outi = outi * feather + bg * (1 - feather)
+            bgpix = tgt + grain
+            feather = ndimage.gaussian_filter(sm.astype(np.float64), 1.5)[:, :, None]
+            out = out * feather + bgpix * (1 - feather)
         d = rng.random((h, w, 3)) - rng.random((h, w, 3))
-        outi = np.clip(outi + d, 0, 255).round().astype(np.uint8)
+        clipped = ((out > 254.5) | (out < 0.5)).mean() * 100
+        out = np.clip(out + d, 0, 255).round().astype(np.uint8)
         name = os.path.splitext(os.path.basename(p))[0] + '_norm.png'
-        Image.fromarray(outi).save(os.path.join(out_dir, name))
-        shift = (C.mean() - 1) * 100
-        print("  %-30s -> %s   mean correction %+.2f%%" % (os.path.basename(p), name, shift))
+        Image.fromarray(out).save(os.path.join(out_dir, name))
+        warn = '  ** %.2f%% of pixels clipping' % clipped if clipped > 0.5 else ''
+        print("  %-40s -> %-34s median correction %+.2f%%%s"
+              % (os.path.basename(p)[:40], name[:34], (np.median(C) - 1) * 100, warn))
 
     print("\nVERIFY")
+    finals = []
     for p in paths:
         name = os.path.splitext(os.path.basename(p))[0] + '_norm.png'
         a = np.asarray(Image.open(os.path.join(out_dir, name)).convert('RGB')).astype(np.float64)
-        sm = subject_mask(a)
-        report(name, fit_surface(a, ~sm))
+        sf = fit_surface(a, ~subject_mask(a))
+        finals.append(sf)
+        report(name, sf)
+
+    S = np.stack(finals)
+    spread = (S.max(0) - S.min(0))
+    print("\n  background agreement across the set: mean %.2f levels, "
+          "95th pct %.2f, worst %.2f" % (spread.mean(), np.percentile(spread, 95), spread.max()))
+
 
 if __name__ == '__main__':
     main()
