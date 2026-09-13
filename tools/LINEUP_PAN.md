@@ -92,6 +92,10 @@ plain standing pose, and spacing has to open up to keep the blend seam off them.
   value per clip.
 - `--smooth` — optical-flow interpolation when retiming a trimmed clip back up
   to length. Slower, but no judder.
+- `--keep-prep DIR` / `--prepared` — the flatten-and-loop prep costs roughly
+  90s per clip and does not depend on the pace. Save the tiles once with
+  `--keep-prep`, then re-run at a different `--per-model` against those tiles
+  with `--prepared` and only the composite is repeated.
 - `--spacing` (default `0.75`) — gap between model centres in screen widths.
   Lower packs models closer but pushes the feathered seam onto the model; the
   script warns when that happens.

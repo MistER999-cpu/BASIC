@@ -201,8 +201,20 @@ def build(args):
     mw = args.model_width * W
 
     tmp = tempfile.mkdtemp(prefix="lineup_")
-    print("  preparing clips...")
-    clips, lens = normalize_prepass(clips, tmp, args)
+    if args.prepared:
+        # Inputs are already seamless loop tiles from a previous run, so skip
+        # straight to the composite. The flattening pass is the slow part and
+        # does not need repeating just to change the pace.
+        print("  using pre-prepared loop tiles (skipping prep)")
+        lens = [probe_duration(c) or 6.0 for c in clips]
+    else:
+        print("  preparing clips...")
+        clips, lens = normalize_prepass(clips, tmp, args)
+    if args.keep_prep and not args.prepared:
+        os.makedirs(args.keep_prep, exist_ok=True)
+        for i, c in enumerate(clips):
+            shutil.copy(c, os.path.join(args.keep_prep, f"prep{i:02d}.mp4"))
+        print(f"  prepared tiles kept in {args.keep_prep}")
 
     # Every tile loops forever, so clip length no longer constrains anything:
     # pan speed becomes a free choice rather than whatever the shortest clip
@@ -319,6 +331,12 @@ def main():
                     help="seconds to drop off the head of each clip, comma "
                          "separated, e.g. '0,1,0,1.75'. Use it when a clip opens "
                          "with the model still walking into position.")
+    ap.add_argument("--prepared", action="store_true",
+                    help="inputs are already loop tiles from --keep-prep; skips "
+                         "trim/flatten/loop and goes straight to the composite")
+    ap.add_argument("--keep-prep", default="",
+                    help="save the prepared loop tiles to this directory so a "
+                         "re-run at a different pace can reuse them")
     ap.add_argument("--smooth", action="store_true",
                     help="optical-flow interpolation when retiming a trimmed "
                          "clip back up to length (slower, but no judder)")
