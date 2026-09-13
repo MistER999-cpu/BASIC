@@ -9,23 +9,35 @@ Every clip is laid out side by side on a very wide virtual canvas. The seams
 between neighbouring clips are feathered across flat wall, where a dissolve is
 invisible. A 9:16 window is then craned across that canvas at constant speed.
 
-The part that makes it read as one take: each clip is **delayed** so it is
-actually playing during the seconds its model is on screen, and freeze-padded
-before and after. The freeze is off-screen, so nobody sees it.
+Each clip is turned into a **seamless loop** first -- forward, then reverse with
+the two endpoint frames dropped so the wrap does not repeat a frame -- and fed
+in with `-stream_loop -1`. Every model therefore keeps moving the whole time the
+camera can see them, and clip length stops constraining anything: the pan speed
+is a free choice rather than whatever the shortest clip could cover.
 
 ## Measured from the reference
 
 | | reference | `--style slow` | `--style punchy` |
 |---|---|---|---|
-| pan speed | 0.108 screen-widths/s | 0.122 | 0.243 |
-| model centre-to-centre | ~6.0 s | ~6.2 s | ~3.1 s |
-| time a model is on screen | ~13.5 s | 12.0 s | 6.0 s |
-| total, 8 models | — | ~44 s | ~23 s |
+| pan speed | 0.108 screen-widths/s | 0.140 | 0.280 |
+| model centre-to-centre | ~6.0 s | 6.0 s | 3.0 s |
+| time a model is on screen | ~13.5 s | ~11.9 s | ~6.0 s |
+| total, 8 models | — | ~43 s | ~22 s |
 
-A model is on screen far longer than they are the hero, which is why a 6 s clip
-cannot cover a reference-speed pan on its own. `--style slow` gets the extra
-seconds by ping-ponging each clip (forward, then reverse); `--style punchy`
-instead pans twice as fast so one pass is enough.
+Set the pace directly with `--per-model` (seconds a model holds frame) or
+`--duration` (total runtime); `--style` is just a shorthand for the two above.
+
+## Two things that cause freezing
+
+Both are fixed, and both are worth knowing if you change the defaults:
+
+- **Freeze-padding.** An earlier version held each clip on its first and last
+  frame outside the window where its model was on screen. That estimate depends
+  on `--model-width`, and any underestimate puts a visibly frozen model on
+  screen. Looping removed the estimate entirely.
+- **Retiming.** `setpts` does not invent frames, it duplicates them, so
+  stretching a 4.25 s clip to 6 s freezes roughly one frame in three. `--clip-len`
+  is therefore off by default. If you do use it, pair it with `--smooth`.
 
 ## Usage
 

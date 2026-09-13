@@ -110,30 +110,34 @@ def poly_expr(coef, var="(X/W)"):
     return "(" + "+".join(terms).replace("+-", "-") + ")"
 
 
-def normalize_prepass(clips, tmp, args, pingpong):
-    """Bring every clip to a common length and framing before the main graph.
+def normalize_prepass(clips, tmp, args):
+    """Turn each clip into a seamless, endlessly loopable tile.
 
-    Does four things per clip, in one pass:
+    Per clip, in one pass:
       * drops `--trim` seconds off the head (generated clips often open with the
         model still walking into position, which breaks a lineup)
-      * retimes what's left back up to a common length, so trimming one clip
-        does not force the whole pan to hurry
-      * normalises scale/crop/fps
-      * optionally ping-pongs, rotated by `--phase`
+      * normalises scale/crop/fps and, with --flatten, the wall lighting
+      * ping-pongs forward+reverse into a loop that joins back to its own first
+        frame, so `-stream_loop` can run it forever without a seam or a freeze
 
-    This also keeps memory sane: the reverse filter buffers a whole clip, so
-    doing eight of them inside one graph needs ~12GB.
+    The reverse segment drops its first and last frame, otherwise the wrap
+    repeats one frame and the loop ticks.
+
+    Retiming (--clip-len) is off by default: stretching a clip with `setpts`
+    does not invent frames, it duplicates them, and a duplicated frame is a
+    frozen frame. Use --smooth if you must retime.
     """
     W, H, FPS = args.width, args.height, args.fps
     durs = [(probe_duration(c) or 6.0) - t for c, t in zip(clips, args.trims)]
-    target = args.clip_len or max(durs)
-    out = []
+    out, lens = [], []
     for i, c in enumerate(clips):
         p = os.path.join(tmp, f"pp{i}.mp4")
-        speed = target / durs[i]
+        speed = (args.clip_len / durs[i]) if args.clip_len else 1.0
+        dur = durs[i] * speed
+        nf = max(int(round(dur * FPS)), 2)
         note = f"trim {args.trims[i]:.2f}s, " if args.trims[i] else ""
         note += f"retime x{speed:.2f}, " if abs(speed - 1) > 0.02 else ""
-        print(f"    prep {i + 1}/{len(clips)}: {note}{'ping-pong' if pingpong else 'single'}",
+        print(f"    prep {i + 1}/{len(clips)}: {note}loop {(2 * nf - 2) / FPS:.2f}s",
               flush=True)
 
         f = f"[0:v]trim=start={args.trims[i]:.4f},setpts=(PTS-STARTPTS)*{speed:.6f}"
@@ -149,18 +153,21 @@ def normalize_prepass(clips, tmp, args, pingpong):
         else:
             f += f",fps={FPS}"
 
-        if pingpong:
-            f += ",split[a][b];[b]reverse,setpts=PTS-STARTPTS[rv];[a][rv]concat=n=2:v=1:a=0"
-            # Rotate the loop so the forward/reverse turnaround does not land
-            # dead centre frame, where a model un-doing their own motion shows.
-            r = target * 2 * args.phase
-            if r > 0.01:
-                f += ("[pp];[pp]split[p1][p2];"
-                      f"[p1]trim=start={r:.4f},setpts=PTS-STARTPTS[x];"
-                      f"[p2]trim=end={r:.4f},setpts=PTS-STARTPTS[y];"
-                      "[x][y]concat=n=2:v=1:a=0[v]")
-            else:
-                f += "[v]"
+        # forward + reverse-minus-endpoints = a loop with no repeated frame
+        f += (",split[a][b];"
+              f"[b]reverse,trim=start_frame=1:end_frame={nf - 1},"
+              "setpts=PTS-STARTPTS[rv];[a][rv]concat=n=2:v=1:a=0")
+
+        # Rotate each loop by a different amount: keeps the forward/reverse
+        # turnaround off centre frame, and stops all eight models from moving
+        # in lockstep.
+        loop_len = (2 * nf - 2) / FPS
+        r = loop_len * ((args.phase + i / max(len(clips), 1)) % 1.0)
+        if r > 0.01:
+            f += ("[pp];[pp]split[p1][p2];"
+                  f"[p1]trim=start={r:.4f},setpts=PTS-STARTPTS[x];"
+                  f"[p2]trim=end={r:.4f},setpts=PTS-STARTPTS[y];"
+                  "[x][y]concat=n=2:v=1:a=0[v]")
         else:
             f += "[v]"
 
@@ -170,7 +177,8 @@ def normalize_prepass(clips, tmp, args, pingpong):
              "-crf", str(max(args.crf - 3, 12)), "-pix_fmt", "yuv420p", "-an", p],
             check=True)
         out.append(p)
-    return out, target
+        lens.append(loop_len)
+    return out, lens
 
 
 def build(args):
@@ -190,36 +198,23 @@ def build(args):
               f"(needs >= {1 - edge:.2f} at --model-width {args.model_width}); "
               f"models will ghost through each other.", file=sys.stderr)
 
-    # How wide the model actually is inside its own frame. Everything outside
-    # this is wall, and wall may be frozen without anyone noticing.
     mw = args.model_width * W
-
-    pingpong = args.style == "slow"
 
     tmp = tempfile.mkdtemp(prefix="lineup_")
     print("  preparing clips...")
-    clips, src = normalize_prepass(clips, tmp, args, pingpong)
-    avail = src * 2 if pingpong else src         # usable seconds per clip
+    clips, lens = normalize_prepass(clips, tmp, args)
 
-    # Speed is set by the slowest thing we must satisfy: each model has to stay
-    # on screen no longer than its clip can cover.
-    v_max = (W + mw) / avail                     # px/s
-    if args.duration:
-        v = (n - 1) * S / args.duration
-        if v < v_max * 0.999:
-            pass                                 # slower than needed: fine
-        else:
-            print(f"  ! --duration {args.duration}s needs {v:.0f} px/s but clips "
-                  f"only cover {v_max:.0f} px/s; clamping.", file=sys.stderr)
-            v = v_max
-    else:
-        v = v_max
+    # Every tile loops forever, so clip length no longer constrains anything:
+    # pan speed becomes a free choice rather than whatever the shortest clip
+    # could cover. Take it straight from how long a model should hold frame.
+    per = args.per_model or (6.0 if args.style == "slow" else 3.0)
+    v = (n - 1) * S / args.duration if args.duration else S / per
 
     total = ((n - 1) * S) / v + 2 * args.hold
     canvas_w = (n - 1) * S + W
 
-    print(f"  clips        : {n} x {src:.2f}s"
-          f"{'  (ping-ponged to %.2fs)' % avail if pingpong else ''}")
+    print(f"  clips        : {n}, looping "
+          f"{min(lens):.1f}-{max(lens):.1f}s each (never freezes)")
     print(f"  model width  : {args.model_width:.2f} of frame")
     print(f"  output       : {W}x{H} @ {FPS}fps, {total:.1f}s")
     print(f"  canvas       : {canvas_w}px wide, spacing {S}px, feather {overlap}px")
@@ -241,14 +236,6 @@ def build(args):
         if args.match and i > 0:
             f += f",colorchannelmixer=rr={args.gains[i][0]}:gg={args.gains[i][1]}:bb={args.gains[i][2]}"
         fg.append(f + f"[{lbl}]")
-
-        # Delay so the clip is live exactly while its model crosses the window,
-        # cloning the first/last frame outside that span.
-        t_in = max(0.0, (i * S - (W + mw) / 2) / v + args.hold)
-        tail = max(0.0, total - t_in - avail) + 1.0
-        fg.append(f"[{lbl}]tpad=start_duration={t_in:.4f}:start_mode=clone:"
-                  f"stop_duration={tail:.4f}:stop_mode=clone[{lbl}t]")
-        lbl = f"{lbl}t"
 
         # Feather the left edge of every clip but the first.
         if i > 0:
@@ -278,7 +265,7 @@ def build(args):
 
     cmd = [FFMPEG, "-y"]
     for c in clips:
-        cmd += ["-i", c]
+        cmd += ["-stream_loop", "-1", "-i", c]   # never runs out, never freezes
     cmd += ["-loop", "1", "-i", ramp]
     cmd += ["-filter_complex", ";".join(fg),
             "-map", "[v]", "-t", f"{total:.3f}",
@@ -310,14 +297,17 @@ def main():
     ap.add_argument("clips", nargs="+", help="clips in left-to-right screen order")
     ap.add_argument("-o", "--out", default="lineup.mp4")
     ap.add_argument("--style", choices=["slow", "punchy"], default="slow",
-                    help="slow = ping-pong each clip, reference-speed pan (long). "
-                         "punchy = each clip plays once, ~2x faster pan (short).")
+                    help="slow = 6s per model, the reference pace. "
+                         "punchy = 3s per model, about half the runtime.")
+    ap.add_argument("--per-model", type=float, default=None,
+                    help="seconds each model holds frame, centre to centre. "
+                         "Overrides --style. The reference sits at 6.0.")
     ap.add_argument("--spacing", type=float, default=0.75,
                     help="gap between model centres, in screen widths (default 0.75)")
     ap.add_argument("--model-width", type=float, default=0.46,
                     help="how much of the frame width the model occupies (default 0.46)")
     ap.add_argument("--duration", type=float, default=None,
-                    help="force total length in seconds (slower only)")
+                    help="force total length in seconds; overrides --per-model")
     ap.add_argument("--hold", type=float, default=0.6,
                     help="still beat at the head and tail (default 0.6s)")
     ap.add_argument("--phase", type=float, default=0.25,
@@ -342,12 +332,18 @@ def main():
     ap.add_argument("--height", type=int, default=1920)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--clip-len", type=float, default=0,
-                    help="common working length after trimming (default: the "
-                         "longest trimmed clip, so nothing is ever sped up)")
+                    help="retime every clip to this length. Off by default -- "
+                         "stretching duplicates frames, which reads as freezing. "
+                         "Pair with --smooth if you use it.")
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--preset", default="medium")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+
+    # h264 needs even dimensions; an odd one silently rounds and then the
+    # alpha mask no longer matches the frame it is merged with.
+    args.width -= args.width % 2
+    args.height -= args.height % 2
 
     args.bg = "0xEDEAE4"
     args.trims = [0.0] * len(args.clips)
