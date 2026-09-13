@@ -27,6 +27,20 @@ is a free choice rather than whatever the shortest clip could cover.
 Set the pace directly with `--per-model` (seconds a model holds frame) or
 `--duration` (total runtime); `--style` is just a shorthand for the two above.
 
+## Two things that slice a model in half
+
+The blend seam sits in the leftmost `1 - spacing` of each tile. Anything that
+puts a model there gets dissolved into the neighbouring clip, which reads as a
+hard vertical line down the model.
+
+- **Off-centre models.** Generated clips do not centre their subject reliably.
+  Across one eight-clip set the centres ranged 0.474 to 0.566 of frame width.
+  `--recentre` measures each one, slides the frame to centre it, and smears the
+  exposed edge (flat wall and floor, so the smear does not show).
+- **Wide models.** A model holding a jacket out, or with elbows out, is much
+  wider than a plain standing pose. `--recentre` also reports the widest model
+  once centred and raises `--spacing` to clear it, so you do not have to guess.
+
 ## Two things that cause freezing
 
 Both are fixed, and both are worth knowing if you change the defaults:
@@ -85,6 +99,8 @@ plain standing pose, and spacing has to open up to keep the blend seam off them.
 
 ## Options worth knowing
 
+- `--recentre` — centres each model and picks a safe `--spacing`. Use it by
+  default alongside `--flatten`.
 - `--flatten` — the one to reach for. See above.
 - `--match` — weaker alternative to `--flatten`: matches each clip's overall
   wall tone to the first clip's, but cannot fix a gradient.
@@ -118,3 +134,15 @@ The technique only disappears if the clips agree with each other:
 - static or near-static camera in each clip (any built-in camera move fights
   the pan)
 - subtle idle motion only; big gestures expose the ping-pong reversal
+
+## Memory
+
+The composite runs at output size, sliding each tile past a fixed window. An
+earlier version assembled the whole lineup as one wide canvas and cropped a
+window out of it; every stage of the overlay chain then carried a full-canvas
+RGBA frame, which reached 13.9GB at eight clips and was OOM-killed.
+
+The alpha mask is also fed as a bounded input (`-framerate` + `-t`). As a bare
+`-loop 1` image it is an infinite source that ffmpeg generates far faster than
+the tiles consuming it, so its frames pile up in the filter queues: that alone
+was 10GB at 540p, against 1.3GB once bounded.

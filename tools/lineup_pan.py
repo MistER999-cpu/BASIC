@@ -98,6 +98,50 @@ def measure_flatten(clips, tmp, band=0.10, deg=4, samples=10):
     return out
 
 
+def measure_centres(clips, trims, band=(0.10, 0.88), samples=10):
+    """Where each model actually sits inside its own frame.
+
+    Generated clips do not centre their subject reliably -- across eight clips
+    here the centre ranged 0.474 to 0.566 of frame width, and the widest model
+    reached 0.90. Anything past the spacing fraction falls inside the next
+    tile's blend seam and gets dissolved away, which cuts the model in half
+    down a vertical line. Returns (centre, left, right) per clip as fractions.
+    """
+    import numpy as np
+    from PIL import Image
+    tmp = tempfile.mkdtemp(prefix="ctr_")
+    out = []
+    for i, c in enumerate(clips):
+        d = probe_duration(c) or 6.0
+        t0 = trims[i]
+        L, R = [], []
+        for k in range(samples):
+            q = os.path.join(tmp, f"c{i}_{k}.png")
+            ts = t0 + (d - t0) * (k + 0.5) / samples
+            subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-ss", f"{ts:.3f}",
+                            "-i", c, "-frames:v", "1", "-vf", "scale=270:-1", q],
+                           check=True)
+            a = np.asarray(Image.open(q).convert("RGB"), dtype=np.float32)
+            os.remove(q)
+            H, W, _ = a.shape
+            e = max(int(W * 0.06), 3)
+            lb, rb = a[:, :e].mean(1), a[:, -e:].mean(1)
+            u = np.linspace(0, 1, W)[None, :, None]
+            m = np.abs(a - (lb[:, None, :] * (1 - u) + rb[:, None, :] * u)).sum(2) > 40
+            m = m[int(H * band[0]):int(H * band[1])]      # skip floor shadow and ceiling
+            cv = np.where(m.sum(0) > m.shape[0] * 0.04)[0]
+            if len(cv) > 1:
+                L.append(cv[0] / W)
+                R.append(cv[-1] / W)
+        if not L:
+            out.append((0.5, 0.2, 0.8))
+            continue
+        l, r = float(np.percentile(L, 5)), float(np.percentile(R, 95))
+        out.append(((l + r) / 2, l, r))
+    shutil.rmtree(tmp, ignore_errors=True)
+    return out
+
+
 def poly_expr(coef, var="(X/W)"):
     """numpy polyfit coefficients -> an ffmpeg expression string."""
     n = len(coef) - 1
@@ -136,6 +180,8 @@ def normalize_prepass(clips, tmp, args):
         dur = durs[i] * speed
         nf = max(int(round(dur * FPS)), 2)
         note = f"trim {args.trims[i]:.2f}s, " if args.trims[i] else ""
+        if args.centres:
+            note += f"recentre {(0.5 - args.centres[i][0]) * 100:+.1f}%, "
         note += f"retime x{speed:.2f}, " if abs(speed - 1) > 0.02 else ""
         print(f"    prep {i + 1}/{len(clips)}: {note}loop {(2 * nf - 2) / FPS:.2f}s",
               flush=True)
@@ -148,6 +194,19 @@ def normalize_prepass(clips, tmp, args):
             f += (",geq="
                   + ":".join(f"{ch}='clip({ch}(X\,Y)*{g[k]}\,0\,255)'"
                              for k, ch in enumerate("rgb")))
+        if args.centres:
+            d = int(round((0.5 - args.centres[i][0]) * W))
+            if abs(d) >= 2:
+                # Slide the frame and smear the exposed edge. The edge is flat
+                # wall and floor, so a smear there is invisible; a solid pad
+                # would not be, since the floor is not the wall colour.
+                if d > 0:
+                    f += (f",crop={W - d}:{H}:0:0,pad={W}:{H}:{d}:0,"
+                          f"fillborders=left={d}:mode=smear")
+                else:
+                    k = -d
+                    f += (f",crop={W - k}:{H}:{k}:0,pad={W}:{H}:0:0,"
+                          f"fillborders=right={k}:mode=smear")
         if args.smooth and speed > 1.02:
             f += f",minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:vsbmc=1"
         else:
@@ -244,7 +303,10 @@ def build(args):
 
     for i, _ in enumerate(clips):
         lbl = f"c{i}"
-        f = f"[{i}:v]format=rgba,setpts=PTS-STARTPTS"
+        # no-op when the tile is already at output size, but keeps --prepared
+        # tiles usable at a different resolution than they were baked at
+        f = (f"[{i}:v]scale={W}:{H}:force_original_aspect_ratio=increase,"
+             f"crop={W}:{H},setsar=1,format=rgba,setpts=PTS-STARTPTS")
         if args.match and i > 0:
             f += f",colorchannelmixer=rr={args.gains[i][0]}:gg={args.gains[i][1]}:bb={args.gains[i][2]}"
         fg.append(f + f"[{lbl}]")
@@ -255,30 +317,38 @@ def build(args):
             lbl = f"{lbl}m"
         fg.append(f"[{lbl}]null[t{i}]")
 
-    fg.append(f"color=c={args.bg}:s={canvas_w}x{H}:r={FPS}:d={total:.3f},format=rgba[base]")
+    # Where the camera is along the lineup at time t.
+    hold, T = args.hold, total
+    travel = canvas_w - W
+    if args.ease:
+        prog = f"clip((t-{hold})/{max(T - 2 * hold, 0.001)},0,1)"
+        cam = f"{travel}*({prog}*{prog}*(3-2*{prog}))"
+    else:
+        cam = f"clip({v}*(t-{hold}),0,{travel})"
+
+    # Composite at OUTPUT size, sliding each tile past a fixed window, rather
+    # than assembling the whole lineup and cropping it. Building the full
+    # canvas meant every stage of the overlay chain carried a
+    # canvas_w x H RGBA frame; at eight clips that reached 13.9GB and was
+    # OOM-killed. Only ~2.5 tiles are ever on screen, and overlay skips the
+    # ones that fall outside the frame.
+    esc = lambda e: e.replace(",", chr(92) + ",")
+    fg.append(f"color=c={args.bg}:s={W}x{H}:r={FPS}:d={total:.3f},format=rgba[base]")
     prev = "base"
     for i in range(n):
         out = f"ov{i}"
-        fg.append(f"[{prev}][t{i}]overlay=x={i * S}:y=0:shortest=0:format=auto[{out}]")
+        fg.append(f"[{prev}][t{i}]overlay=x='{esc(f'{i * S}-({cam})')}':y=0:"
+                  f"eval=frame:shortest=0:format=auto[{out}]")
         prev = out
-
-    # Crane the window across the canvas.
-    hold, T = args.hold, total
-    if args.ease:
-        p = (f"(t-{hold})/{max(T - 2 * hold, 0.001)}")
-        prog = f"clip({p},0,1)"
-        xexpr = f"({canvas_w}-{W})*({prog}*{prog}*(3-2*{prog}))"
-    else:
-        xexpr = f"clip({v}*(t-{hold}),0,{canvas_w - W})"
-
-    # commas inside the expression must be escaped or ffmpeg splits the args
-    fg.append(f"[{prev}]crop={W}:{H}:x='{xexpr.replace(',', chr(92) + ',')}':y=0,"
-              f"format=yuv420p[v]")
+    fg.append(f"[{prev}]format=yuv420p[v]")
 
     cmd = [FFMPEG, "-y"]
     for c in clips:
         cmd += ["-stream_loop", "-1", "-i", c]   # never runs out, never freezes
-    cmd += ["-loop", "1", "-i", ramp]
+    # Bound the mask input. As a bare -loop 1 image it is an infinite source
+    # that ffmpeg generates far faster than the tiles it feeds, so its frames
+    # pile up in the filter queues and memory climbs without limit.
+    cmd += ["-loop", "1", "-framerate", str(FPS), "-t", f"{total:.3f}", "-i", ramp]
     cmd += ["-filter_complex", ";".join(fg),
             "-map", "[v]", "-t", f"{total:.3f}",
             "-c:v", "libx264", "-preset", args.preset, "-crf", str(args.crf),
@@ -340,6 +410,12 @@ def main():
     ap.add_argument("--smooth", action="store_true",
                     help="optical-flow interpolation when retiming a trimmed "
                          "clip back up to length (slower, but no judder)")
+    ap.add_argument("--recentre", "--recenter", action="store_true",
+                    dest="recentre",
+                    help="centre each model in its own tile, and pick --spacing "
+                         "from how wide they actually are. Without it, an "
+                         "off-centre model reaches into the next tile's blend "
+                         "seam and gets sliced down a vertical line.")
     ap.add_argument("--flatten", action="store_true",
                     help="flatten each clip's wall lighting to one shared level. "
                          "Fixes the vertical seams that otherwise show where two "
@@ -372,6 +448,19 @@ def main():
         args.trims = t
     args.gains = [(1, 1, 1)] * len(args.clips)
     args.flats = None
+    args.centres = None
+    if args.recentre and not args.prepared:
+        print("  measuring where each model sits...")
+        args.centres = measure_centres(args.clips, args.trims)
+        need = max(r + 0.5 - c for c, l, r in args.centres)
+        for cl, (c, l, r) in zip(args.clips, args.centres):
+            print(f"    {os.path.basename(cl):14s} centre {c:.3f} "
+                  f"span {l:.3f}-{r:.3f}  shift {(0.5 - c) * 100:+.1f}%")
+        print(f"    widest model reaches {need:.3f} once centred "
+              f"-> --spacing must be >= {need:.2f}")
+        if args.spacing < need - 1e-6:
+            print(f"    raising --spacing {args.spacing} to {need:.2f}")
+            args.spacing = round(need + 0.005, 3)
     if args.flatten:
         print("  measuring wall lighting across clips...")
         args.flats = measure_flatten(args.clips, tempfile.mkdtemp(prefix="flat_"))
