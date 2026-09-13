@@ -96,6 +96,35 @@ Deliberate stubs, each isolated to one component:
 Bag and saved items live in `components/providers/StoreProvider.tsx`, a single
 reducer hydrated from `localStorage` after mount.
 
+## Deploying
+
+Two build modes, one codebase.
+
+**Server build (default).** Vercel, a Node host, a container. Keeps server
+rendering and on-demand image optimisation. Nothing to configure — point the
+host at `web/` as the project root.
+
+**Static export.** Any plain file host: GitHub Pages, S3, a Netlify drop.
+
+```bash
+NEXT_OUTPUT_EXPORT=1 npm run build          # writes web/out/
+```
+
+Two optional environment variables:
+
+| Variable | When you need it |
+|---|---|
+| `NEXT_PUBLIC_BASE_PATH` | The site is served from a subdirectory, e.g. `/BASIC` for a GitHub project page |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin for metadata, sitemap and structured data |
+
+`public/` paths must go through `asset()` in `lib/asset.ts` — `next/image`
+prefixes its own chunks with `basePath` but not the `src` of a file in
+`public/`, so a subdirectory deploy would 404 on every photograph. Import
+`components/ui/Img.tsx` rather than `next/image` directly and it is handled.
+
+`.github/workflows/deploy-pages.yml` builds the export and publishes it to
+GitHub Pages on every push to the default branch.
+
 ## Conventions
 
 - Server Components by default; `"use client"` only where there is state.

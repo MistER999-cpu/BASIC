@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { Img as Image } from "@/components/ui/Img";
 import Link from "next/link";
 import { useStore } from "@/components/providers/StoreProvider";
 import { Overlay } from "@/components/ui/Overlay";

@@ -29,7 +29,7 @@ export const site = {
   tagline: "The essentials, considered.",
   description:
     "BASIC makes a short, deliberate wardrobe of everyday essentials — cut from long-staple cotton and merino, made in limited runs, and designed to be worn until they wear out.",
-  url: "https://basic.studio",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://basic.studio",
   founded: 2026,
   email: "studio@basic.studio",
   phone: "+31 20 123 4567",

@@ -5,6 +5,13 @@ import { collections } from "@/lib/collections";
 import { journal, lookbook } from "@/lib/editorial";
 import { helpDocs, legalDocs } from "@/lib/content";
 
+/**
+ * Both outputs are built purely from local data, so they can be emitted at
+ * build time — which `output: export` also requires.
+ */
+export const dynamic = "force-static";
+
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const url = (path: string) => `${site.url}${path}`;
   const now = new Date();
