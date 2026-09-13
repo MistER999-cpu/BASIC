@@ -136,7 +136,9 @@ def measure_centres(clips, trims, band=(0.10, 0.88), samples=10):
         if not L:
             out.append((0.5, 0.2, 0.8))
             continue
-        l, r = float(np.percentile(L, 5)), float(np.percentile(R, 95))
+        # Use the extremes, not percentiles: a model only has to reach past the
+        # seam in one frame to be sliced in that frame.
+        l, r = float(np.min(L)), float(np.max(R))
         out.append(((l + r) / 2, l, r))
     shutil.rmtree(tmp, ignore_errors=True)
     return out
@@ -457,10 +459,11 @@ def main():
             print(f"    {os.path.basename(cl):14s} centre {c:.3f} "
                   f"span {l:.3f}-{r:.3f}  shift {(0.5 - c) * 100:+.1f}%")
         print(f"    widest model reaches {need:.3f} once centred "
-              f"-> --spacing must be >= {need:.2f}")
+              f"-> --spacing must be >= {need:.3f}")
         if args.spacing < need - 1e-6:
-            print(f"    raising --spacing {args.spacing} to {need:.2f}")
-            args.spacing = round(need + 0.005, 3)
+            args.spacing = min(round(need + 0.03, 3), 0.97)
+            print(f"    raising --spacing to {args.spacing} "
+                  f"(the widest model plus headroom)")
     if args.flatten:
         print("  measuring wall lighting across clips...")
         args.flats = measure_flatten(args.clips, tempfile.mkdtemp(prefix="flat_"))
