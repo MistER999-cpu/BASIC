@@ -1,3 +1,14 @@
+# BASIC
+
+This repository holds two things:
+
+- **[`web/`](web) — the BASIC storefront.** Next.js App Router, TypeScript and
+  Tailwind. See [`web/README.md`](web/README.md).
+- **The liquid-glass slot reveal** — the render pipeline documented below, which
+  composites the product colourways onto vertical footage.
+
+---
+
 # Liquid-glass slot reveal
 
 A frosted, refracting glass panel floats over vertical footage; three reels spin

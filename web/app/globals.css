@@ -1,0 +1,236 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   BASIC — design tokens
+   A warm-neutral system pulled from the garments themselves: bone paper, ink
+   text, and the clay / camel / sand of the colourway range.
+--------------------------------------------------------------------------- */
+@theme {
+  /* surfaces */
+  --color-paper: #f7f4ef;
+  --color-paper-deep: #efe9e0;
+  --color-bone: #fbf9f6;
+  --color-sand: #e7dfd3;
+  --color-line: #e2dacd;
+  --color-line-strong: #cec3b2;
+
+  /* ink */
+  --color-ink: #16110e;
+  --color-ink-soft: #3b332c;
+  --color-muted: #5f574f;
+  --color-faint: #766e66;
+
+  /* accents, matched to the colourways */
+  --color-clay: #6b4a34;
+  --color-camel: #b08a5e;
+  --color-espresso: #3d2b20;
+  --color-sage: #9ba391;
+
+  /* state */
+  --color-success: #4a6b4f;
+  --color-danger: #8c3b2e;
+
+  /* type scale — fluid, editorial */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.25;
+  --text-hero: clamp(3.25rem, 11vw, 10rem);
+  --text-hero--line-height: 0.88;
+  --text-display: clamp(2.5rem, 6.2vw, 5.5rem);
+  --text-display--line-height: 0.95;
+  --text-title: clamp(1.875rem, 3.6vw, 3.25rem);
+  --text-title--line-height: 1.04;
+  --text-heading: clamp(1.375rem, 2.1vw, 1.875rem);
+  --text-heading--line-height: 1.15;
+  --text-lead: clamp(1.0625rem, 1.35vw, 1.3125rem);
+  --text-lead--line-height: 1.6;
+
+  --tracking-label: 0.16em;
+  --tracking-wordmark: 0.28em;
+
+  /* motion — the vocabulary the animation pass will build on */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-quick: 240ms;
+  --duration-base: 480ms;
+  --duration-slow: 900ms;
+
+  /* layout */
+  --spacing-gutter: 1.25rem;
+  --radius-none: 0px;
+
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-rise: rise var(--duration-slow) var(--ease-out-expo) both;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-instrument), "Times New Roman", Georgia, serif;
+}
+
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 1.75rem, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern", "liga", "calt";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* A whisper of paper grain. Keeps large flat fields from reading as flat. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.032;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Native controls, in brand */
+  input, select, textarea, button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Components
+--------------------------------------------------------------------------- */
+@layer components {
+  /* Uppercase micro-label used throughout the site as a structural marker. */
+  .label {
+    font-size: var(--text-micro);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Underline that draws in from the left on hover. */
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0% 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--duration-base) var(--ease-out-expo);
+    padding-bottom: 2px;
+  }
+  .link-underline:hover,
+  .link-underline:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  /* Persistent rule that retracts on hover — used in nav. */
+  .link-retract {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 100% 1px;
+    background-position: 100% 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--duration-base) var(--ease-out-expo);
+    padding-bottom: 2px;
+  }
+  .link-retract:hover {
+    background-size: 0% 1px;
+  }
+
+  .field {
+    width: 100%;
+    background-color: transparent;
+    border-bottom: 1px solid var(--color-line-strong);
+    padding: 0.75rem 0;
+    outline: none;
+    transition: border-color var(--duration-quick) var(--ease-out-quint);
+  }
+  .field::placeholder {
+    color: var(--color-faint);
+  }
+  .field:focus {
+    border-color: var(--color-ink);
+  }
+
+  .hairline {
+    border-color: var(--color-line);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Utilities
+--------------------------------------------------------------------------- */
+@utility text-balance-none {
+  text-wrap: initial;
+}
+
+/* Scroll reveal. The observer adds [data-revealed]; without JS the content is
+   visible anyway, so nothing depends on script to be readable. */
+@layer utilities {
+  /* Scoped to .js, which an inline script in the document head sets before
+     first paint. Without scripting the content is simply visible — nothing
+     below the hero depends on JS to be readable. */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
+    transition:
+      opacity var(--duration-slow) var(--ease-out-expo),
+      transform var(--duration-slow) var(--ease-out-expo);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .js [data-reveal][data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .js [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
