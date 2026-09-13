@@ -57,40 +57,120 @@ def make_ramp(path, width, height, feather):
     ).save(path)
 
 
-def pingpong_prepass(clips, tmp, W, H, FPS, crf, preset, phase):
-    """Render forward+reverse copies to disk, rotated by `phase`.
+def measure_flatten(clips, tmp, band=0.10, deg=4, samples=10):
+    """Per-channel, per-column gain that flattens each clip's wall lighting.
 
-    The reverse filter buffers a whole clip in memory; doing all eight inside
-    one graph needs ~12GB, so each is baked separately first.
+    Generated clips each come with their own horizontal falloff, and the
+    directions disagree -- one brightens to the right, the next darkens. Tiling
+    them then puts a bright clip centre next to a dark clip edge, which reads as
+    a hard vertical seam straight down the wall.
 
-    Without the rotation the forward/reverse turnaround falls exactly halfway
-    through a model's time on screen -- i.e. dead centre frame, where a model
-    visibly un-doing their own motion is most obvious. Rotating the loop moves
-    both turnarounds out towards the edges. The wrap itself is seamless: the
-    ping-pong begins and ends on the same frame.
+    So: sample the wall above the models' heads, fit a smooth curve per channel,
+    and divide it out, normalising every clip to one shared flat level. This
+    fixes gradient, exposure and colour cast in a single pass.
     """
+    import numpy as np
+    from PIL import Image
+    profs = []
+    for i, c in enumerate(clips):
+        d = probe_duration(c) or 6.0
+        acc = []
+        for k in range(samples):
+            q = os.path.join(tmp, f"fl{i}_{k}.png")
+            subprocess.run([FFMPEG, "-y", "-loglevel", "error",
+                            "-ss", f"{d * (k + 0.5) / samples:.3f}", "-i", c,
+                            "-frames:v", "1", "-vf", "scale=240:-1", q], check=True)
+            a = np.asarray(Image.open(q).convert("RGB"), dtype=np.float32)
+            acc.append(a[: max(int(a.shape[0] * band), 2)].mean(0))   # columns x RGB
+            os.remove(q)
+        profs.append(np.mean(acc, axis=0))
+
+    target = np.mean([p.mean(0) for p in profs], axis=0)              # one shared level
+    u = np.linspace(0.0, 1.0, profs[0].shape[0])
+    out = []
+    for p in profs:
+        chans = []
+        for ch in range(3):
+            sm = np.convolve(p[:, ch], np.ones(9) / 9, mode="same")
+            sm[:4], sm[-4:] = sm[4], sm[-5]                           # convolution edges
+            chans.append(np.polyfit(u, np.clip(target[ch] / sm, 0.80, 1.25), deg))
+        out.append(chans)
+    return out
+
+
+def poly_expr(coef, var="(X/W)"):
+    """numpy polyfit coefficients -> an ffmpeg expression string."""
+    n = len(coef) - 1
+    terms = []
+    for k, c in enumerate(coef):
+        p = n - k
+        terms.append(f"{c:.8f}" if p == 0
+                     else f"{c:.8f}*{var}" if p == 1
+                     else f"{c:.8f}*pow({var}\,{p})")
+    return "(" + "+".join(terms).replace("+-", "-") + ")"
+
+
+def normalize_prepass(clips, tmp, args, pingpong):
+    """Bring every clip to a common length and framing before the main graph.
+
+    Does four things per clip, in one pass:
+      * drops `--trim` seconds off the head (generated clips often open with the
+        model still walking into position, which breaks a lineup)
+      * retimes what's left back up to a common length, so trimming one clip
+        does not force the whole pan to hurry
+      * normalises scale/crop/fps
+      * optionally ping-pongs, rotated by `--phase`
+
+    This also keeps memory sane: the reverse filter buffers a whole clip, so
+    doing eight of them inside one graph needs ~12GB.
+    """
+    W, H, FPS = args.width, args.height, args.fps
+    durs = [(probe_duration(c) or 6.0) - t for c, t in zip(clips, args.trims)]
+    target = args.clip_len or max(durs)
     out = []
     for i, c in enumerate(clips):
         p = os.path.join(tmp, f"pp{i}.mp4")
-        print(f"    ping-pong {i + 1}/{len(clips)} ...", flush=True)
-        r = (probe_duration(c) or 6.0) * 2 * phase
-        pre = (f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,"
-               f"crop={W}:{H},fps={FPS},setsar=1,setpts=PTS-STARTPTS,split[a][b];"
-               f"[b]reverse,setpts=PTS-STARTPTS[rv];[a][rv]concat=n=2:v=1:a=0")
-        if r > 0.01:
-            fc = (pre + "[pp];[pp]split[p1][p2];"
-                  f"[p1]trim=start={r:.4f},setpts=PTS-STARTPTS[x];"
-                  f"[p2]trim=end={r:.4f},setpts=PTS-STARTPTS[y];"
-                  "[x][y]concat=n=2:v=1:a=0[v]")
+        speed = target / durs[i]
+        note = f"trim {args.trims[i]:.2f}s, " if args.trims[i] else ""
+        note += f"retime x{speed:.2f}, " if abs(speed - 1) > 0.02 else ""
+        print(f"    prep {i + 1}/{len(clips)}: {note}{'ping-pong' if pingpong else 'single'}",
+              flush=True)
+
+        f = f"[0:v]trim=start={args.trims[i]:.4f},setpts=(PTS-STARTPTS)*{speed:.6f}"
+        f += (f",scale={W}:{H}:force_original_aspect_ratio=increase,"
+              f"crop={W}:{H},setsar=1")
+        if args.flats:
+            g = [poly_expr(c) for c in args.flats[i]]
+            f += (",geq="
+                  + ":".join(f"{ch}='clip({ch}(X\,Y)*{g[k]}\,0\,255)'"
+                             for k, ch in enumerate("rgb")))
+        if args.smooth and speed > 1.02:
+            f += f",minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:vsbmc=1"
         else:
-            fc = pre + "[v]"
+            f += f",fps={FPS}"
+
+        if pingpong:
+            f += ",split[a][b];[b]reverse,setpts=PTS-STARTPTS[rv];[a][rv]concat=n=2:v=1:a=0"
+            # Rotate the loop so the forward/reverse turnaround does not land
+            # dead centre frame, where a model un-doing their own motion shows.
+            r = target * 2 * args.phase
+            if r > 0.01:
+                f += ("[pp];[pp]split[p1][p2];"
+                      f"[p1]trim=start={r:.4f},setpts=PTS-STARTPTS[x];"
+                      f"[p2]trim=end={r:.4f},setpts=PTS-STARTPTS[y];"
+                      "[x][y]concat=n=2:v=1:a=0[v]")
+            else:
+                f += "[v]"
+        else:
+            f += "[v]"
+
         subprocess.run(
-            [FFMPEG, "-y", "-loglevel", "error", "-i", c, "-filter_complex", fc,
-             "-map", "[v]", "-c:v", "libx264", "-preset", preset,
-             "-crf", str(max(crf - 3, 12)), "-pix_fmt", "yuv420p", "-an", p],
+            [FFMPEG, "-y", "-loglevel", "error", "-i", c, "-filter_complex", f,
+             "-map", "[v]", "-c:v", "libx264", "-preset", args.preset,
+             "-crf", str(max(args.crf - 3, 12)), "-pix_fmt", "yuv420p", "-an", p],
             check=True)
         out.append(p)
-    return out
+    return out, target
 
 
 def build(args):
@@ -114,8 +194,11 @@ def build(args):
     # this is wall, and wall may be frozen without anyone noticing.
     mw = args.model_width * W
 
-    src = min(probe_duration(c) or args.clip_len for c in clips)
     pingpong = args.style == "slow"
+
+    tmp = tempfile.mkdtemp(prefix="lineup_")
+    print("  preparing clips...")
+    clips, src = normalize_prepass(clips, tmp, args, pingpong)
     avail = src * 2 if pingpong else src         # usable seconds per clip
 
     # Speed is set by the slowest thing we must satisfy: each model has to stay
@@ -137,17 +220,13 @@ def build(args):
 
     print(f"  clips        : {n} x {src:.2f}s"
           f"{'  (ping-ponged to %.2fs)' % avail if pingpong else ''}")
+    print(f"  model width  : {args.model_width:.2f} of frame")
     print(f"  output       : {W}x{H} @ {FPS}fps, {total:.1f}s")
     print(f"  canvas       : {canvas_w}px wide, spacing {S}px, feather {overlap}px")
     print(f"  pan speed    : {v:.1f} px/s  ({v / W:.3f} screen-widths/s)")
     print(f"  per model    : {S / v:.2f}s centre-to-centre, {(W + mw) / v:.2f}s on screen")
 
-    # --- prepass + masks ----------------------------------------------------
-    tmp = tempfile.mkdtemp(prefix="lineup_")
-    if pingpong:
-        print("  baking ping-pong copies (keeps peak memory sane)...")
-        clips = pingpong_prepass(clips, tmp, W, H, FPS, args.crf, args.preset,
-                                 args.phase)
+    # --- mask ---------------------------------------------------------------
     ramp = os.path.join(tmp, "ramp.png")
     make_ramp(ramp, W, H, overlap)
 
@@ -158,8 +237,7 @@ def build(args):
 
     for i, _ in enumerate(clips):
         lbl = f"c{i}"
-        f = (f"[{i}:v]scale={W}:{H}:force_original_aspect_ratio=increase,"
-             f"crop={W}:{H},fps={FPS},setsar=1,format=rgba,setpts=PTS-STARTPTS")
+        f = f"[{i}:v]format=rgba,setpts=PTS-STARTPTS"
         if args.match and i > 0:
             f += f",colorchannelmixer=rr={args.gains[i][0]}:gg={args.gains[i][1]}:bb={args.gains[i][2]}"
         fg.append(f + f"[{lbl}]")
@@ -247,19 +325,43 @@ def main():
                          "on screen, 0-0.5 (default 0.25; 0 puts it dead centre)")
     ap.add_argument("--ease", action="store_true",
                     help="ease the move in and out instead of constant speed")
+    ap.add_argument("--trim", default="",
+                    help="seconds to drop off the head of each clip, comma "
+                         "separated, e.g. '0,1,0,1.75'. Use it when a clip opens "
+                         "with the model still walking into position.")
+    ap.add_argument("--smooth", action="store_true",
+                    help="optical-flow interpolation when retiming a trimmed "
+                         "clip back up to length (slower, but no judder)")
+    ap.add_argument("--flatten", action="store_true",
+                    help="flatten each clip's wall lighting to one shared level. "
+                         "Fixes the vertical seams that otherwise show where two "
+                         "clips meet. Supersedes --match.")
     ap.add_argument("--match", action="store_true",
                     help="colour-match every clip's wall to the first clip")
     ap.add_argument("--width", type=int, default=1080)
     ap.add_argument("--height", type=int, default=1920)
     ap.add_argument("--fps", type=int, default=30)
-    ap.add_argument("--clip-len", type=float, default=6.0)
+    ap.add_argument("--clip-len", type=float, default=0,
+                    help="common working length after trimming (default: the "
+                         "longest trimmed clip, so nothing is ever sped up)")
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--preset", default="medium")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
     args.bg = "0xEDEAE4"
+    args.trims = [0.0] * len(args.clips)
+    if args.trim:
+        t = [float(x) for x in args.trim.split(",")]
+        if len(t) != len(args.clips):
+            sys.exit(f"--trim has {len(t)} values but there are {len(args.clips)} clips")
+        args.trims = t
     args.gains = [(1, 1, 1)] * len(args.clips)
+    args.flats = None
+    if args.flatten:
+        print("  measuring wall lighting across clips...")
+        args.flats = measure_flatten(args.clips, tempfile.mkdtemp(prefix="flat_"))
+        args.match = False
     if args.match:
         print("  matching wall tone across clips...")
         args.gains = measure_gains(args.clips, args.width, args.height)

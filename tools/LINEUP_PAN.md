@@ -42,11 +42,44 @@ python3 tools/lineup_pan.py clips/*.mp4 -o lineup.mp4 --style punchy --match
 Clips are consumed in the order given, which is their left-to-right screen
 order — so name them `01.mp4 … 08.mp4`.
 
+## Preparing real clips
+
+Generated clips rarely arrive ready to tile. Two problems show up every time,
+and both have a flag:
+
+**Wall lighting disagrees between clips.** Each clip carries its own horizontal
+falloff, and the directions often oppose each other — one brightens to the
+right, the next darkens. Tiled, that puts a bright centre against a dark edge
+and draws a hard vertical seam down the backdrop. `--flatten` samples the wall
+above the models' heads, fits a curve per channel, and divides it out,
+normalising everything to one shared flat level. It fixes gradient, exposure
+and colour cast at once, and supersedes `--match`. Use it by default.
+
+**A clip opens with the model still walking into position.** In a lineup every
+model has to sit at the same distance, so a clip whose model grows 10-17% over
+its run will visibly swell as it crosses frame. Measure where the scale settles,
+drop that much off the head with `--trim`, and the remainder is retimed back up
+to a common length so trimming one clip does not force the whole pan to hurry.
+
+```bash
+python3 tools/lineup_pan.py clips/*.mp4 -o lineup.mp4 \
+    --style slow --flatten --trim 0,1.0,0,1.75 \
+    --model-width 0.62 --spacing 0.82
+```
+
+Measure `--model-width` off your own clips rather than trusting the default —
+a model holding a jacket out, or standing with elbows out, is much wider than a
+plain standing pose, and spacing has to open up to keep the blend seam off them.
+
 ## Options worth knowing
 
-- `--match` — normalises each clip's wall tone to the first clip's. Generated
-  clips drift in exposure and colour; without this the wall visibly steps at
-  every seam.
+- `--flatten` — the one to reach for. See above.
+- `--match` — weaker alternative to `--flatten`: matches each clip's overall
+  wall tone to the first clip's, but cannot fix a gradient.
+- `--trim` — seconds to drop off the head of each clip, comma separated, one
+  value per clip.
+- `--smooth` — optical-flow interpolation when retiming a trimmed clip back up
+  to length. Slower, but no judder.
 - `--spacing` (default `0.75`) — gap between model centres in screen widths.
   Lower packs models closer but pushes the feathered seam onto the model; the
   script warns when that happens.
