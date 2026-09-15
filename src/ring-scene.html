@@ -49,7 +49,10 @@ window.build = function (cfg) {
   stage.style.perspective = cfg.perspective + 'px';
   stage.style.perspectiveOrigin = cfg.originX + 'px ' + cfg.originY + 'px';
 
-  document.getElementById('plate').src = cfg.plate;
+  /* Either layer may be absent - a bare ring on black is how the copy and its
+     spacing get checked without a plate to read it against. */
+  const plate = document.getElementById('plate');
+  if (cfg.plate) plate.src = cfg.plate; else plate.style.display = 'none';
   const subj = document.getElementById('subject');
   if (cfg.subject) subj.src = cfg.subject; else subj.style.display = 'none';
 
@@ -112,10 +115,11 @@ window.build = function (cfg) {
       };
       const back = make(false), front = make(true);
       rBack.appendChild(back); rFront.appendChild(front);
-      glyphs.push({ angle, back, front });
+      glyphs.push({ angle, back, front, c: rec.c, centre, adv });
     });
   }
 
+  window.__glyphs = glyphs;   // layout inspection
   window.setTime(0);
   return { fontSize, glyphs: glyphs.length, circumference };
 };

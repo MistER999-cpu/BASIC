@@ -27,56 +27,42 @@
       "phase": 0,
       "items": [
         {
-          "t": "BASIC",
-          "bold": true
+          "t": "MEILLEURE QUALITÉ"
         },
         {
           "t": "MEILLEUR PRIX"
         },
         {
-          "t": "BLANC"
-        },
-        {
-          "t": "NOIR"
-        },
-        {
-          "t": "BASIC",
+          "t": "BASIC ESSENTIEL",
           "bold": true
-        },
-        {
-          "t": "MEILLEURE QUALITÉ"
         },
         {
           "t": "BEIGE"
         },
         {
-          "t": "MARRON"
+          "t": "POUR TOUS LES JOURS"
         }
       ]
     },
     {
       "y": 40,
-      "phase": -25,
+      "phase": 172,
       "items": [
         {
-          "t": "COTON PREMIUM"
+          "t": "MEILLEURE QUALITÉ"
         },
         {
-          "t": "BASIC",
+          "t": "MEILLEUR PRIX"
+        },
+        {
+          "t": "BASIC ESSENTIEL",
           "bold": true
         },
         {
-          "t": "NOUVELLE COLLECTION"
+          "t": "BEIGE"
         },
         {
-          "t": "QUATRE COULEURS"
-        },
-        {
-          "t": "BASIC",
-          "bold": true
-        },
-        {
-          "t": "L’ESSENTIEL"
+          "t": "POUR TOUS LES JOURS"
         }
       ]
     }

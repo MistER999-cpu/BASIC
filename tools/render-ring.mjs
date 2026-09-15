@@ -31,13 +31,19 @@ for (const key of ['plate', 'subject']) {
 const { width: W, height: H, fps, duration } = cfg;
 const total = Math.round(duration * fps);
 
+/* Supersample. A thin vertical stroke - the stem of an I - on a glyph turned
+   steeply away from camera lands on a fraction of a pixel and antialiases to
+   nothing, so BEIGE renders as "BE GE". Capturing at 2x and letting ffmpeg
+   resolve it down keeps the stem. */
+const SS = cfg.supersample ?? 2;
+
 rmSync(SUB, { recursive: true, force: true });
 mkdirSync(SUB, { recursive: true });
 mkdirSync('out', { recursive: true });
 
-console.log(`[1/3] launching Chromium at ${W}x${H}`);
+console.log(`[1/3] launching Chromium at ${W}x${H} (capturing ${SS}x)`);
 const browser = await launch();
-const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: SS });
 await page.goto(pathToFileURL(resolve('src/ring-scene.html')).href, { waitUntil: 'load' });
 
 const geom = await page.evaluate(c => window.build(c), cfg);
@@ -64,7 +70,7 @@ await browser.close();
 console.log('[3/3] encoding');
 execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y',
   '-framerate', String(fps), '-i', join(SUB, 'f_%05d.jpg'),
-  '-vf', 'format=yuv420p',
+  '-vf', (SS > 1 ? `scale=${W}:${H}:flags=lanczos,` : '') + 'format=yuv420p',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', String(cfg.crf ?? 17),
   '-profile:v', 'high', '-level', '4.2', '-movflags', '+faststart',
   '-r', String(fps), OUT], { stdio: ['ignore', 'inherit', 'inherit'] });
