@@ -1,0 +1,84 @@
+{
+  "_note": "Rotating word-ring. Geometry is carried over from the 231-frame teardown of the reference reel, scaled from 720x1280 to 1080x1920 (x1.5). Spin rate 20.9 deg/sec is the measured original.",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 6,
+  "crf": 17,
+  "plate": "assets/ring/plate.png",
+  "subject": "assets/ring/subject.png",
+  "cx": 538,
+  "cy": 1042,
+  "radius": 466,
+  "tilt": -18.7,
+  "roll": 13,
+  "perspective": 3600,
+  "originX": 540,
+  "originY": 960,
+  "spinRate": 20.9,
+  "spin0": 0,
+  "color": "#EDF60A",
+  "backOpacity": 0.88,
+  "glow": "0 0 10px rgba(237,246,10,0.26)",
+  "separator": "  ",
+  "rows": [
+    {
+      "y": -40,
+      "phase": 0,
+      "items": [
+        {
+          "t": "BASIC",
+          "bold": true
+        },
+        {
+          "t": "MEILLEUR PRIX"
+        },
+        {
+          "t": "BLANC"
+        },
+        {
+          "t": "NOIR"
+        },
+        {
+          "t": "BASIC",
+          "bold": true
+        },
+        {
+          "t": "MEILLEURE QUALITÉ"
+        },
+        {
+          "t": "BEIGE"
+        },
+        {
+          "t": "MARRON"
+        }
+      ]
+    },
+    {
+      "y": 40,
+      "phase": -25,
+      "items": [
+        {
+          "t": "COTON PREMIUM"
+        },
+        {
+          "t": "BASIC",
+          "bold": true
+        },
+        {
+          "t": "NOUVELLE COLLECTION"
+        },
+        {
+          "t": "QUATRE COULEURS"
+        },
+        {
+          "t": "BASIC",
+          "bold": true
+        },
+        {
+          "t": "L’ESSENTIEL"
+        }
+      ]
+    }
+  ]
+}

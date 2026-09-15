@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:#000;overflow:hidden}
+  #stage{position:absolute;left:0;top:0;overflow:hidden;background:#000}
+  #plate,#subject{position:absolute;left:0;top:0;width:100%;height:100%;
+                  object-fit:cover;display:block}
+  .world{position:absolute;width:0;height:0;transform-style:preserve-3d}
+  .ring{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
+  .ch{position:absolute;left:0;top:0;transform-style:preserve-3d;white-space:pre;
+      font-family:"Liberation Sans",Arial,Helvetica,sans-serif;
+      line-height:1;will-change:transform}
+</style></head>
+<body>
+<div id="stage">
+  <img id="plate">
+  <div class="world" id="wBack"><div class="ring" id="rBack"></div></div>
+  <img id="subject">
+  <div class="world" id="wFront"><div class="ring" id="rFront"></div></div>
+</div>
+<script>
+/* Text on a spinning 3D cylinder.
+   Each glyph exists twice - once in the world behind the subject image, once in
+   the world in front of it - and only the copy on the correct side of z=0 is
+   shown. That gives a hard, flicker-free occlusion split without relying on the
+   browser to sort a large plane against a hundred small ones, which z-fights. */
+
+let CFG = null;
+const glyphs = [];      // { angle, back, front }
+
+function facesFor(items, sep) {
+  /* Flatten [{t,bold}] into per-character records with a separator between
+     items - and one more after the last, because the row is a closed loop:
+     without it the final word butts straight into the first one at the seam. */
+  const out = [];
+  items.forEach((it, i) => {
+    if (i) for (const c of sep) out.push({ c, bold: false });
+    for (const c of it.t) out.push({ c, bold: !!it.bold });
+  });
+  for (const c of sep) out.push({ c, bold: false });
+  return out;
+}
+
+window.build = function (cfg) {
+  CFG = cfg;
+  const stage = document.getElementById('stage');
+  stage.style.width  = cfg.width + 'px';
+  stage.style.height = cfg.height + 'px';
+  stage.style.perspective = cfg.perspective + 'px';
+  stage.style.perspectiveOrigin = cfg.originX + 'px ' + cfg.originY + 'px';
+
+  document.getElementById('plate').src = cfg.plate;
+  const subj = document.getElementById('subject');
+  if (cfg.subject) subj.src = cfg.subject; else subj.style.display = 'none';
+
+  for (const id of ['wBack', 'wFront']) {
+    const w = document.getElementById(id);
+    w.style.left = cfg.cx + 'px';
+    w.style.top  = cfg.cy + 'px';
+    w.style.transform = `rotateZ(${cfg.roll}deg) rotateX(${cfg.tilt}deg)`;
+  }
+
+  const rBack  = document.getElementById('rBack');
+  const rFront = document.getElementById('rFront');
+  rBack.innerHTML = ''; rFront.innerHTML = ''; glyphs.length = 0;
+
+  const circumference = 2 * Math.PI * cfg.radius;
+  const ctx = document.createElement('canvas').getContext('2d');
+  const REF = 100;
+  const fam = '"Liberation Sans",Arial,Helvetica,sans-serif';
+  const widthAt = (rec, size) => {
+    ctx.font = `${rec.bold ? 700 : 400} ${size}px ${fam}`;
+    return ctx.measureText(rec.c).width;
+  };
+
+  /* One font size for every row: the row that runs longest sets it, and the
+     shorter rows take up their slack as extra tracking. Both rows then close
+     their circle exactly, with no seam where the string meets its own start. */
+  const rows = cfg.rows.map(r => {
+    const recs = facesFor(r.items, cfg.separator);
+    const natural = recs.reduce((s, rec) => s + widthAt(rec, REF), 0);
+    return { ...r, recs, natural };
+  });
+  const fontSize = REF * Math.min(...rows.map(r => circumference / r.natural));
+
+  for (const row of rows) {
+    const widths = row.recs.map(rec => widthAt(rec, fontSize));
+    const total  = widths.reduce((a, b) => a + b, 0);
+    const track  = (circumference - total) / row.recs.length;   // leftover as tracking
+
+    let run = 0;
+    row.recs.forEach((rec, i) => {
+      const adv = widths[i] + track;
+      const centre = run + adv / 2;
+      run += adv;
+      if (rec.c === ' ') return;                      // nothing to draw
+
+      const angle = (centre / circumference) * 360 + row.phase;
+      const make = (isFront) => {
+        const el = document.createElement('span');
+        el.className = 'ch';
+        el.textContent = rec.c;
+        el.style.fontSize = fontSize + 'px';
+        el.style.fontWeight = rec.bold ? 700 : 400;
+        el.style.color = cfg.color;
+        if (cfg.glow) el.style.textShadow = cfg.glow;
+        if (!isFront) el.style.opacity = cfg.backOpacity;
+        el.style.transform =
+          `translateY(${row.y}px) rotateY(${angle}deg) translateZ(${cfg.radius}px) ` +
+          `translate(-50%,-50%)`;
+        return el;
+      };
+      const back = make(false), front = make(true);
+      rBack.appendChild(back); rFront.appendChild(front);
+      glyphs.push({ angle, back, front });
+    });
+  }
+
+  window.setTime(0);
+  return { fontSize, glyphs: glyphs.length, circumference };
+};
+
+window.setTime = function (t) {
+  const spin = CFG.spin0 + CFG.spinRate * t;
+  const s = spin * Math.PI / 180;
+  document.getElementById('rBack').style.transform  = `rotateY(${spin}deg)`;
+  document.getElementById('rFront').style.transform = `rotateY(${spin}deg)`;
+  for (const g of glyphs) {
+    const front = Math.cos(g.angle * Math.PI / 180 + s) > 0;
+    g.front.style.visibility = front ? 'visible' : 'hidden';
+    g.back.style.visibility  = front ? 'hidden'  : 'visible';
+  }
+};
+</script>
+</body></html>

@@ -2,3 +2,5 @@ node_modules/
 out/
 assets/base/*
 !assets/base/.gitkeep
+assets/ring/*
+!assets/ring/.gitkeep
