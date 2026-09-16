@@ -49,8 +49,15 @@ if os.path.exists(path):
         if not ok: break
         F.append(f)
     sm = lambda f: cv2.cvtColor(cv2.resize(f, (120, 213)), cv2.COLOR_BGR2GRAY).astype(np.float32)
+    S = [sm(f) for f in F]
+    step = np.array([np.abs(S[i] - S[i + 1]).mean() for i in range(len(S) - 1)])
+    wrap = float(np.abs(S[-1] - S[0]).mean())
     print(f"\n{os.path.basename(path)}: {len(F)} frames / {len(F)/b.FPS:.2f}s")
-    print(f"  loop closure |f0 - f{len(F)-1}| = {np.abs(sm(F[0]) - sm(F[-1])).mean():.2f}"
-          f"   (reference clip scored 2.65)")
+    # An absolute wrap difference is meaningless on its own — it scales with how
+    # contrasty the content is. What matters is that the wrap costs no more than
+    # any other frame step.
+    print(f"  frame-to-frame diff  mean {step.mean():.2f}  max {step.max():.2f}")
+    print(f"  wrap f{len(F)-1} -> f0      {wrap:.2f}"
+          f"   -> {'seamless' if wrap <= step.max() * 1.05 else 'VISIBLE JUMP'}")
 else:
     print(f"\n(no render at {path} — run build.py first)")

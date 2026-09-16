@@ -1,3 +1,4 @@
-out/
+out/*
+!out/v1.mp4
 assets/_test/
 __pycache__/

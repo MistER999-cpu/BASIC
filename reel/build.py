@@ -1,75 +1,89 @@
 #!/usr/bin/env python3
 """
 BASIC — parallax reel builder.
-Replicates the measured geometry of the reference: two flat cut-out layers
-scrolling horizontally at different constant speeds over a scrolling plate.
-No 3D, no easing, no zoom. Loops exactly at 480 frames.
 
-Drop 4 background plates + 8 model shots into assets/ and run:  python3 build.py
+Replicates the measured geometry of the reference clip: two flat cut-out layers
+scrolling horizontally at different constant speeds over a scrolling plate.
+No 3D camera, no easing, no zoom, no cuts. Loops exactly at NFRAMES.
+
+    python3 build.py            # renders out/v1.mp4 from assets/
+    python3 build.py --test     # renders out/v1_placeholder.mp4 from assets/_test/
 """
 import cv2, numpy as np, os, subprocess, sys
 
-# ---------------------------------------------------------------- measured spec
-W, H, FPS, NFRAMES = 1080, 1920, 30, 480          # 16.0 s
-NEAR_V, FAR_V, BG_V = 12.0, 9.0, 9.0              # px/frame, all negative-x
-NEAR_STRIP = int(NEAR_V * NFRAMES)                # 5760 = 4 slots x 1440
-FAR_STRIP  = int(FAR_V  * NFRAMES)                # 4320 = 4 slots x 1080
-BG_STRIP   = int(BG_V   * NFRAMES)                # 4320 = 4 plates x 1080
+# ---------------------------------------------------------------- spec
+W, H, FPS, NFRAMES = 1080, 1920, 30, 450          # 15.0 s
+
+# Layer speeds are chosen so each strip's travel over the loop equals its own
+# width exactly: 4 background plates and 4 slots per layer, parallax held at the
+# reference's measured near:far ratio of 4:3.
+BG_STRIP   = 4 * W                                 # 4320
+FAR_STRIP  = 4 * W                                 # 4320  (4 slots @ 1080)
+NEAR_STRIP = 4 * 1440                              # 5760  (4 slots @ 1440)
+BG_V   = BG_STRIP   / NFRAMES                      # 9.60 px/frame
+FAR_V  = FAR_STRIP  / NFRAMES                      # 9.60
+NEAR_V = NEAR_STRIP / NFRAMES                      # 12.80  -> 4:3 parallax
 NEAR_SPACING, FAR_SPACING = NEAR_STRIP // 4, FAR_STRIP // 4
 
-FAR_HEAD_Y, FAR_FEET_Y = 298, 1613                # 15.5% / 84% of frame height
-FAR_FIG_H = FAR_FEET_Y - FAR_HEAD_Y               # 1315 px
-NEAR_MIN_W = int(0.70 * W)                        # 70% of frame width
-NEAR_TOP_Y = -58                                  # crown clips off the top edge
-BG_BLUR = 11                                      # extra softening on the plate
+FAR_HEAD_Y, FAR_FEET_Y = 298, 1613                 # 15.5% / 84% of frame height
+FAR_FIG_H = FAR_FEET_Y - FAR_HEAD_Y                # 1315 px
+NEAR_TOP_Y = -58                                   # crown clipped off the top edge
+# These poses are wider than the reference's (arms akimbo): height-fitting alone
+# would push the near figures past the frame edges and bury the far model, so the
+# near layer is width-capped and its trouser band stretched to reach the bottom.
+NEAR_MAX_W = 0.88 * W
+NEAR_TAIL  = 0.38                                  # fraction of the figure stretched
+BG_BLUR    = 10                                    # extra softening on the plate
+# The assembled plate's empty field lands ~6 levels under the reference's #E9E9E8;
+# a small gain brings the field onto it and nudges the band into the reference range.
+BG_GAIN    = 1.026
+BG_OVERLAP = 180                                   # cross-dissolve width per seam
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-# --test renders against the synthetic placeholders in assets/_test/
-SUB = "assets/_test" if "--test" in sys.argv else "assets"
-BG  = lambda n: os.path.join(ROOT, SUB, "bg", n)
-MOD = lambda n: os.path.join(ROOT, SUB, "models", n)
-OUT = "out/v1_placeholder.mp4" if "--test" in sys.argv else "out/v1.mp4"
+TEST = "--test" in sys.argv
+SUB  = "assets/_test" if TEST else "assets"
+EXT  = ".png" if TEST else ".jpeg"
+BG   = lambda n: os.path.join(ROOT, SUB, "bg", n + EXT)
+MOD  = lambda n: os.path.join(ROOT, SUB, "models", n + EXT)
+OUT  = "out/v1_placeholder.mp4" if TEST else "out/v1.mp4"
 
-# order established from edge/band-height matching
-BG_ORDER = ["bg4.png", "bg2.png", "bg3.png", "bg1.png"]
+# plate order = the colour wave: low band -> rising -> held high -> descending
+BG_ORDER = ["bg1", "bg2", "bg3", "bg4"]
 
-# beat order: alternates near/far every 2.0 s, alternates model where possible
-NEAR_SLOTS = ["A_near_black.png", "B_near_ivory.png", "B_near_black.png", "A_near_brown.png"]
-FAR_SLOTS  = ["B_far_brown.png",  "A_far_beige.png",  "A_far_ivory.png",  "B_far_beige.png"]
+# beat order: a hero centres every 1.875 s, alternating near/far.
+# Colour never repeats between neighbouring beats; the two unavoidable
+# same-model adjacencies both land on a far shot whose head is turned down.
+NEAR_SLOTS = ["A_near_black", "B_near_ivory", "B_near_black", "A_near_brown"]
+FAR_SLOTS  = ["B_far_brown",  "A_far_beige",  "A_far_ivory",  "B_far_beige"]
+NEAR_PHASE, FAR_PHASE = 864, 1323
 
 # ---------------------------------------------------------------- green key
-def key_green(bgr, lo=12.0, hi=55.0):
-    """Chroma key + despill. Returns BGRA uint8."""
+def key_green(bgr, lo=12.0, hi=55.0, despill=0.15):
     f = bgr.astype(np.float32)
     b, g, r = f[..., 0], f[..., 1], f[..., 2]
-    d = g - np.maximum(r, b)                       # green dominance
-    a = 1.0 - np.clip((d - lo) / (hi - lo), 0, 1)  # green -> 0, subject -> 1
+    d = g - np.maximum(r, b)                        # green dominance
+    a = 1.0 - np.clip((d - lo) / (hi - lo), 0, 1)   # green -> 0, subject -> 1
     a = cv2.GaussianBlur(a, (0, 0), 1.0)
-    # despill: clamp green channel to the warmer of the other two
     cap = np.maximum(r, b)
-    g2 = np.where(g > cap, cap + (g - cap) * 0.15, g)
-    out = np.dstack([b, g2, r, a * 255.0])
-    return np.clip(out, 0, 255).astype(np.uint8)
+    g2 = np.where(g > cap, cap + (g - cap) * despill, g)
+    return np.clip(np.dstack([b, g2, r, a * 255.0]), 0, 255).astype(np.uint8)
 
 def largest_subject(alpha):
-    """Keep only the biggest connected blob — drops stray keyed specks."""
     m = (alpha > 24).astype(np.uint8)
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
     n, lab, st, _ = cv2.connectedComponentsWithStats(m, 8)
     if n <= 1:
         return m.astype(bool)
     k = 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA]))
     return lab == k
 
-def load_cutout(path):
-    """Load a model shot; key it if it still has a green backdrop."""
+def load_cutout(name):
+    path = MOD(name)
     raw = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     if raw is None:
         raise FileNotFoundError(path)
-    if raw.shape[2] == 4:
-        rgba = raw
-    else:
-        rgba = key_green(raw)
+    rgba = raw if raw.shape[2] == 4 else key_green(raw)
     keep = largest_subject(rgba[..., 3])
     rgba[..., 3] = np.where(keep, rgba[..., 3], 0)
     ys, xs = np.where(rgba[..., 3] > 24)
@@ -77,100 +91,102 @@ def load_cutout(path):
         raise ValueError(f"nothing survived the key in {path}")
     return rgba, (xs.min(), ys.min(), xs.max(), ys.max())
 
+# ---------------------------------------------------------------- layers
+def build_bg():
+    """Four plates cross-dissolved into one wrapping strip."""
+    ov = BG_OVERLAP
+    pw = W + ov
+    acc = np.zeros((H, BG_STRIP, 3), np.float32)
+    wgt = np.zeros((1, BG_STRIP), np.float32)
+    ramp = np.ones(pw, np.float32)
+    ramp[:ov]  = np.linspace(0, 1, ov)
+    ramp[-ov:] = np.linspace(1, 0, ov)
+    for k, n in enumerate(BG_ORDER):
+        p = cv2.imread(BG(n))
+        if p is None:
+            raise FileNotFoundError(BG(n))
+        p = cv2.resize(p, (pw, H), interpolation=cv2.INTER_AREA).astype(np.float32)
+        xs = (k * W - ov // 2 + np.arange(pw)) % BG_STRIP
+        np.add.at(acc, (slice(None), xs), p * ramp[None, :, None])
+        np.add.at(wgt, (0, xs), ramp)
+    strip = (acc / np.maximum(wgt[..., None], 1e-6)).astype(np.uint8)
+    strip = np.clip(strip.astype(np.float32) * BG_GAIN, 0, 255).astype(np.uint8)
+    return cv2.GaussianBlur(strip, (0, 0), BG_BLUR)
+
 def place(strip, rgba, bbox, cx, mode):
     x0, y0, x1, y1 = bbox
     fig = rgba[y0:y1 + 1, x0:x1 + 1]
     fh, fw = fig.shape[:2]
     if mode == "far":
-        s = FAR_FIG_H / fh
-        top = FAR_HEAD_Y
+        s, top = FAR_FIG_H / fh, FAR_HEAD_Y
     else:
-        # scale so the figure covers the frame vertically, crown clipped off the
-        # top edge and body running off the bottom — the reference's near framing.
-        s = (H - NEAR_TOP_Y) / fh
-        top = NEAR_TOP_Y
-        if fw * s > 0.92 * W:
-            print(f"    ! near figure would be {100*fw*s/W:.0f}% of frame width — "
-                  f"source is too wide/short for this crop")
-    nw, nh = max(1, int(round(fw * s))), max(1, int(round(fh * s)))
+        s, top = min((H - NEAR_TOP_Y) / fh, NEAR_MAX_W / fw), NEAR_TOP_Y
+    nw, nh = max(1, round(fw * s)), max(1, round(fh * s))
     fig = cv2.resize(fig, (nw, nh), interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_CUBIC)
-    left = int(round(cx - nw / 2))
-    # wrapped alpha-over onto the strip
-    for col in range(nw):
-        sx = (left + col) % strip.shape[1]
-        ys0, ys1 = max(0, top), min(H, top + nh)
-        if ys1 <= ys0:
-            continue
-        src = fig[ys0 - top:ys1 - top, col]
-        a = (src[:, 3:4].astype(np.float32) / 255.0)
-        dst = strip[ys0:ys1, sx]
-        dst[:, :3] = (src[:, :3].astype(np.float32) * a + dst[:, :3].astype(np.float32) * (1 - a)).astype(np.uint8)
-        dst[:, 3] = np.maximum(dst[:, 3], src[:, 3])
-
-def build_bg():
-    plates = []
-    for n in BG_ORDER:
-        p = cv2.imread(BG(n))
-        if p is None:
-            raise FileNotFoundError(BG(n))
-        plates.append(cv2.resize(p, (W, H), interpolation=cv2.INTER_AREA))
-    strip = np.hstack(plates)
-    # feather each seam, including the wrap seam
-    ov = 90
-    for k in range(4):
-        x = k * W
-        for i in range(-ov, ov):
-            t = (i + ov) / (2 * ov)
-            a = (x + i) % BG_STRIP
-            bcol = strip[:, (x - 1) % BG_STRIP].astype(np.float32)
-            strip[:, a] = (strip[:, a].astype(np.float32) * t + bcol * (1 - t)).astype(np.uint8)
-    return cv2.GaussianBlur(strip, (0, 0), BG_BLUR)
+    if mode == "near" and top + nh < H:
+        # stretch the trouser band down to the frame edge. Every near shot ends in
+        # trousers, whose vertical fall takes the stretch without showing a seam.
+        need = H - (top + nh)
+        bh = int(nh * NEAR_TAIL)
+        fig = np.vstack([fig[:-bh], cv2.resize(fig[-bh:], (nw, bh + need),
+                                               interpolation=cv2.INTER_LINEAR)])
+        nh += need
+    left = round(cx - nw / 2)
+    ys0, ys1 = max(0, top), min(H, top + nh)
+    src = fig[ys0 - top:ys1 - top]
+    xs = (left + np.arange(nw)) % strip.shape[1]
+    a = src[..., 3:4].astype(np.float32) / 255.0
+    dst = strip[ys0:ys1][:, xs]
+    strip[ys0:ys1, xs, :3] = (src[..., :3] * a + dst[..., :3] * (1 - a)).astype(np.uint8)
+    strip[ys0:ys1, xs, 3]  = np.maximum(dst[..., 3], src[..., 3])
+    return nw, nh
 
 def build_layer(slots, strip_w, spacing, mode, phase):
     strip = np.zeros((H, strip_w, 4), np.uint8)
     for k, name in enumerate(slots):
-        rgba, bbox = load_cutout(MOD(name))
-        place(strip, rgba, bbox, (phase + k * spacing) % strip_w, mode)
-        print(f"  placed {name:22s} at strip x={int((phase+k*spacing)%strip_w)}")
+        rgba, bbox = load_cutout(name)
+        cx = (phase + k * spacing) % strip_w
+        nw, nh = place(strip, rgba, bbox, cx, mode)
+        print(f"  {name:14s} -> strip x={cx:5d}  {nw}x{nh}px  ({100*nw/W:.0f}% frame width)")
     return strip
 
 def window(img, off, w):
-    off = int(off) % img.shape[1]
+    off = int(round(off)) % img.shape[1]
     if off + w <= img.shape[1]:
         return img[:, off:off + w]
     return np.hstack([img[:, off:], img[:, :off + w - img.shape[1]]])
 
+# ---------------------------------------------------------------- render
 def main():
-    print("background strip…")
-    bg = build_bg()
-    print("far layer…")
-    far = build_layer(FAR_SLOTS, FAR_STRIP, FAR_SPACING, "far", 1323)
-    print("near layer…")
-    near = build_layer(NEAR_SLOTS, NEAR_STRIP, NEAR_SPACING, "near", 864)
+    print(f"spec: {W}x{H} {FPS}fps {NFRAMES}f = {NFRAMES/FPS:.2f}s")
+    print(f"      near {NEAR_V:.2f}px/f strip {NEAR_STRIP} | far {FAR_V:.2f} strip {FAR_STRIP} "
+          f"| bg {BG_V:.2f} strip {BG_STRIP} | parallax {NEAR_V/FAR_V:.4f}")
+    print("background…"); bg = build_bg()
+    print("far layer…");  far  = build_layer(FAR_SLOTS,  FAR_STRIP,  FAR_SPACING,  "far",  FAR_PHASE)
+    print("near layer…"); near = build_layer(NEAR_SLOTS, NEAR_STRIP, NEAR_SPACING, "near", NEAR_PHASE)
 
     raw = os.path.join(ROOT, "out/_raw.mp4")
+    os.makedirs(os.path.join(ROOT, "out"), exist_ok=True)
     vw = cv2.VideoWriter(raw, cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
     print(f"rendering {NFRAMES} frames…")
     for i in range(NFRAMES):
-        frame = window(bg, BG_V * i, W).copy()
+        frame = window(bg, BG_V * i, W).astype(np.float32)
         for layer, v in ((far, FAR_V), (near, NEAR_V)):
             win = window(layer, v * i, W)
             a = win[..., 3:4].astype(np.float32) / 255.0
-            frame = (win[..., :3].astype(np.float32) * a +
-                     frame.astype(np.float32) * (1 - a)).astype(np.uint8)
-        vw.write(frame)
+            frame = win[..., :3].astype(np.float32) * a + frame * (1 - a)
+        vw.write(frame.astype(np.uint8))
     vw.release()
 
     final = os.path.join(ROOT, OUT)
     try:
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw,
-                        "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", final],
-                       check=True)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw, "-c:v", "libx264",
+                        "-crf", "17", "-pix_fmt", "yuv420p",
+                        "-movflags", "+faststart", final], check=True)
         os.remove(raw)
     except Exception:
-        # no ffmpeg: keep the mp4v render, just under the right name
         os.replace(raw, final)
-        print("  (ffmpeg not found — kept the mp4v render; re-encode for delivery)")
+        print("  (ffmpeg not found — kept the mp4v render)")
     print(f"\ndone -> {final}")
 
 if __name__ == "__main__":
