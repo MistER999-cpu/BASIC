@@ -28,12 +28,24 @@ The supplied poses are wider than the reference's — near shots are bbox aspect
 18-24%. Height-fitting the near layer alone would push it past the frame edges
 and bury the far model, so:
 
-- the near layer is width-capped at 88% of frame, tuned so model coverage lands
-  on the reference's measured ~59%;
-- its trouser band is stretched vertically to reach the bottom edge, since every
+- near figures are anchored to a fixed crown-to-thigh height (`NEAR_FIG_H`, 1820px)
+  so all four sit at the same anatomical scale whatever their arm spread. 1820 is
+  the largest value that keeps the widest pose inside `NEAR_MAX_W` (95% of frame),
+  which is what guarantees a near model's hands stay in frame on her beat;
+- their trouser band is stretched vertically to reach the bottom edge, since every
   near shot ends in trousers whose vertical fall takes the stretch invisibly;
 - the background gets a small gain so its empty field lands on the reference's
   measured #E9E9E8.
+
+## Key settings
+
+`key_green` runs a full green clamp with lo=6 / hi=45. These were picked by
+measuring residual green in the soft alpha band across the whole set: they take
+A_far_ivory's edge from +6.8 to +3.6 and remove the dark outline that looser
+settings leave along light garments. Nothing in the wardrobe is green, so a full
+clamp is safe. `fix_edge_colour` then rebuilds colour in the semi-transparent
+band from each pixel's nearest opaque neighbour, so anti-aliasing survives but
+the despilled fringe does not.
 
 ## Usage
 

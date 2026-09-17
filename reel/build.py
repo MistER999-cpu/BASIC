@@ -28,10 +28,12 @@ NEAR_SPACING, FAR_SPACING = NEAR_STRIP // 4, FAR_STRIP // 4
 FAR_HEAD_Y, FAR_FEET_Y = 298, 1613                 # 15.5% / 84% of frame height
 FAR_FIG_H = FAR_FEET_Y - FAR_HEAD_Y                # 1315 px
 NEAR_TOP_Y = -58                                   # crown clipped off the top edge
-# These poses are wider than the reference's (arms akimbo): height-fitting alone
-# would push the near figures past the frame edges and bury the far model, so the
-# near layer is width-capped and its trouser band stretched to reach the bottom.
-NEAR_MAX_W = 0.88 * W
+# Near figures are anchored to a fixed crown-to-thigh height so every one sits at
+# the same anatomical scale regardless of how wide its pose is. NEAR_FIG_H is set
+# so the widest pose still lands inside NEAR_MAX_W — the near model's hands must
+# stay within the frame when she is centred on her beat.
+NEAR_FIG_H = 1820
+NEAR_MAX_W = 0.95 * W                              # safety cap
 NEAR_TAIL  = 0.38                                  # fraction of the figure stretched
 BG_BLUR    = 10                                    # extra softening on the plate
 # The assembled plate's empty field lands ~6 levels under the reference's #E9E9E8;
@@ -58,7 +60,14 @@ FAR_SLOTS  = ["B_far_brown",  "A_far_beige",  "A_far_ivory",  "B_far_beige"]
 NEAR_PHASE, FAR_PHASE = 864, 1323
 
 # ---------------------------------------------------------------- green key
-def key_green(bgr, lo=12.0, hi=55.0, despill=0.15):
+def key_green(bgr, lo=6.0, hi=45.0, despill=0.0):
+    """Chroma key + full despill.
+
+    lo/hi and a full green clamp were chosen by measuring residual green in the
+    soft alpha band across the set — they take A_far_ivory's edge from +6.8 to
+    +3.6 and remove the dark outline the looser settings left on light garments.
+    Nothing in the wardrobe is green, so clamping green entirely is safe.
+    """
     f = bgr.astype(np.float32)
     b, g, r = f[..., 0], f[..., 1], f[..., 2]
     d = g - np.maximum(r, b)                        # green dominance
@@ -67,6 +76,25 @@ def key_green(bgr, lo=12.0, hi=55.0, despill=0.15):
     cap = np.maximum(r, b)
     g2 = np.where(g > cap, cap + (g - cap) * despill, g)
     return np.clip(np.dstack([b, g2, r, a * 255.0]), 0, 255).astype(np.uint8)
+
+def fix_edge_colour(rgba):
+    """Rebuild colour in the soft alpha band from the nearest opaque pixel.
+
+    Despill darkens semi-transparent edge pixels (they are part green, and the
+    green gets clamped), which leaves a thin dark outline once the figure is
+    composited. Replacing the band's colour with its nearest solid neighbour's
+    keeps the anti-aliasing but removes the fringe.
+    """
+    solid = rgba[..., 3] > 200
+    if not solid.any() or solid.all():
+        return rgba
+    inv = (~solid).astype(np.uint8)
+    _, lab = cv2.distanceTransformWithLabels(inv, cv2.DIST_L2, 3,
+                                             labelType=cv2.DIST_LABEL_PIXEL)
+    zy, zx = np.nonzero(inv == 0)                 # solid pixels, raster order
+    nearest = rgba[..., :3][zy[lab - 1], zx[lab - 1]]
+    rgba[..., :3] = np.where(solid[..., None], rgba[..., :3], nearest)
+    return rgba
 
 def largest_subject(alpha):
     m = (alpha > 24).astype(np.uint8)
@@ -86,6 +114,7 @@ def load_cutout(name):
     rgba = raw if raw.shape[2] == 4 else key_green(raw)
     keep = largest_subject(rgba[..., 3])
     rgba[..., 3] = np.where(keep, rgba[..., 3], 0)
+    rgba = fix_edge_colour(rgba)
     ys, xs = np.where(rgba[..., 3] > 24)
     if len(ys) == 0:
         raise ValueError(f"nothing survived the key in {path}")
@@ -120,7 +149,7 @@ def place(strip, rgba, bbox, cx, mode):
     if mode == "far":
         s, top = FAR_FIG_H / fh, FAR_HEAD_Y
     else:
-        s, top = min((H - NEAR_TOP_Y) / fh, NEAR_MAX_W / fw), NEAR_TOP_Y
+        s, top = min(NEAR_FIG_H / fh, NEAR_MAX_W / fw), NEAR_TOP_Y
     nw, nh = max(1, round(fw * s)), max(1, round(fh * s))
     fig = cv2.resize(fig, (nw, nh), interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_CUBIC)
     if mode == "near" and top + nh < H:
