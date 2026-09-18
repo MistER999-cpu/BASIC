@@ -1,0 +1,34 @@
+{
+ "reveal-beige": {
+  "w": 728,
+  "h": 2437,
+  "headTop": 0,
+  "headH": 394,
+  "torsoCx": 0.4775,
+  "heads": 6.19
+ },
+ "reveal-black": {
+  "w": 1449,
+  "h": 2571,
+  "headTop": 0,
+  "headH": 520,
+  "torsoCx": 0.4684,
+  "heads": 4.94
+ },
+ "reveal-brown": {
+  "w": 1211,
+  "h": 2214,
+  "headTop": 0,
+  "headH": 349,
+  "torsoCx": 0.4235,
+  "heads": 6.34
+ },
+ "reveal-white": {
+  "w": 955,
+  "h": 2345,
+  "headTop": 0,
+  "headH": 414,
+  "torsoCx": 0.5318,
+  "heads": 5.66
+ }
+}

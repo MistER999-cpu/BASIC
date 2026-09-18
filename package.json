@@ -13,8 +13,10 @@
     "ingest": "python3 tools/ingest.py assets/incoming",
     "paint": "node src/paint/pipeline.mjs",
     "paint:preview": "node tools/paint/preview.mjs",
-    "paint:prep": "python3 tools/paint/measure.py && python3 tools/paint/matte.py && python3 tools/paint/organise.py && python3 tools/paint/cursor.py",
-    "paint:sfx": "python3 tools/paint/sfx.py"
+    "paint:prep": "python3 tools/paint/measure.py && python3 tools/paint/matte.py && python3 tools/paint/organise.py && python3 tools/paint/cursor.py && python3 tools/paint/reveals.py && python3 tools/paint/timeline.py",
+    "paint:sfx": "python3 tools/paint/sfx.py",
+    "paint:sizes": "node tools/paint/sizes.mjs all",
+    "paint:timeline": "python3 tools/paint/timeline.py"
   },
   "repository": {
     "type": "git",

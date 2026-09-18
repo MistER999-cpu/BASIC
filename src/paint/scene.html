@@ -3,21 +3,35 @@
 <title>paint spot</title>
 <style>
   html,body{margin:0;padding:0;background:#E4E4E4;overflow:hidden}
-  #stage{position:relative;overflow:hidden;image-rendering:auto}
+  #stage{position:relative;overflow:hidden;background:#E4E4E4}
   #ui{position:absolute;left:0;top:0;transform-origin:0 0}
   .layer{position:absolute;overflow:hidden}
   .piece{position:absolute;transform-origin:50% 50%;will-change:transform}
   .piece img{width:100%;height:100%;object-fit:contain;display:block}
   #tray .cell{position:absolute;display:flex;align-items:center;justify-content:center}
-  #tray .cell img{max-width:84%;max-height:84%;object-fit:contain;display:block}
-  #cursor{position:absolute;transform-origin:22% 6%;image-rendering:pixelated;z-index:40}
+  #tray .cell img{max-width:90%;max-height:90%;object-fit:contain;display:block}
+  #cursor{position:absolute;transform-origin:22% 6%;z-index:60}
   #cursor img{width:100%;display:block;image-rendering:pixelated}
-  #heartFill{position:absolute;z-index:20}
+  .press{position:absolute;z-index:30;pointer-events:none;
+         box-shadow:inset 2px 2px 0 rgba(0,0,0,.34),inset -2px -2px 0 rgba(255,255,255,.5);
+         background:rgba(0,0,0,.09)}
+  #selCell{position:absolute;z-index:30;outline:2px dotted #14307a;
+           background:rgba(20,48,122,.24);outline-offset:-3px}
+  .chip{position:absolute;z-index:25}
+  #chipRing{position:absolute;z-index:26;box-shadow:inset 2px 2px 0 rgba(0,0,0,.55),
+            inset -2px -2px 0 rgba(255,255,255,.65);outline:2px solid #14307a}
+  #heartFill{position:absolute;z-index:20;transform-origin:50% 60%}
   #heartFill svg{width:100%;height:100%;display:block}
   .slice{position:absolute;left:0;background-repeat:no-repeat;will-change:transform}
-  #logo{position:absolute;display:flex;align-items:center;justify-content:center;
-        font-family:Helvetica,Arial,sans-serif;font-weight:600;color:#111;
-        letter-spacing:.28em;text-indent:.28em;white-space:nowrap}
+  .ghost{position:absolute;inset:0;background-repeat:no-repeat;mix-blend-mode:screen}
+  #burn{position:absolute;inset:0;background:#F4F4F4}
+  #endcard{position:absolute;inset:0;display:flex;flex-direction:column;
+           align-items:center;justify-content:center;gap:6%}
+  #word{font-family:Helvetica,Arial,sans-serif;font-weight:600;color:#14151a;
+        letter-spacing:.28em;text-indent:.28em;white-space:nowrap;transform-origin:50% 50%}
+  #swatchRow{display:flex;align-items:flex-end;justify-content:center}
+  #swatchRow div{transform-origin:50% 100%}
+  #swatchRow img{display:block;height:100%;width:auto}
 </style>
 <div id="stage">
   <img id="ui">
@@ -25,37 +39,39 @@
   <div class="layer" id="canvas">
     <div class="layer" id="flat"></div>
     <div class="layer" id="shot"></div>
-    <div class="layer" id="glitch"></div>
-    <div id="logo"></div>
+    <div class="layer" id="glitch"><div id="burn"></div></div>
+    <div id="endcard"><div id="word"></div><div id="swatchRow"></div></div>
   </div>
   <div id="heartFill"></div>
+  <div id="selCell"></div>
   <div id="cursor"><img></div>
 </div>
 <script>
-const E=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const E=(t,i)=>{const e=document.createElement(t);if(i)e.id=i;return e};
 const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
 const easeIO=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
-const easeOut=u=>1-Math.pow(1-u,3);
-/* back-ease: overshoot then settle, the little bounce each garment lands with */
-function back(u,over){const s=1.70158*over;return 1+ (s+1)*Math.pow(u-1,3)+s*Math.pow(u-1,2)}
-/* deterministic per-frame noise so every render of frame N is identical */
-function rnd(n){let x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x)}
-
+/* back-ease: overshoot then settle - the bounce each garment lands with */
+const back=(u,o)=>{const s=1.70158*o;return 1+(s+1)*Math.pow(u-1,3)+s*Math.pow(u-1,2)};
+/* deterministic noise: frame N always renders identically */
+const rnd=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x)};
 let S=null;
 
 window.build=function(cfg){
-  const {width:W,height:H}=cfg.output, ui=cfg.uiGeom;
+  const {width:W,height:H}=cfg.output, ui=cfg.uiGeom, A=cfg.anim;
   const stage=document.getElementById('stage');
   stage.style.width=W+'px'; stage.style.height=H+'px';
 
-  // one uniform cover-fit from the generated window image into the output frame
-  const sc=Math.max(W/ui.w,H/ui.h), ox=(W-ui.w*sc)/2, oy=(H-ui.h*sc)/2;
+  /* Contain-fit, not cover: the window keeps its whole layout and the page
+     colour fills whatever is left, so the same scene renders at 9:16, 4:5 or
+     1:1 without the chrome being sliced off. */
+  const sc=Math.min(W/ui.w,H/ui.h), ox=(W-ui.w*sc)/2, oy=(H-ui.h*sc)/2;
   const M=r=>({x:r[0]*sc+ox,y:r[1]*sc+oy,w:r[2]*sc,h:r[3]*sc});
   const uiImg=document.getElementById('ui');
   uiImg.src=cfg.uiSrc; uiImg.style.width=ui.w*sc+'px';
   uiImg.style.transform=`translate(${ox}px,${oy}px)`;
 
-  const C=M(ui.canvas), slot0=M(ui.slots[0]), pitch=(ui.slots[1][1]-ui.slots[0][1])*sc;
+  const C=M(ui.canvas), slot0=M(ui.slots[0]);
+  const pitch=(ui.slots[1][1]-ui.slots[0][1])*sc;
   const trayBox={x:slot0.x,y:slot0.y,w:slot0.w,h:pitch*ui.slots.length};
   const put=(el,b)=>{el.style.left=b.x+'px';el.style.top=b.y+'px';
                      el.style.width=b.w+'px';el.style.height=b.h+'px'};
@@ -64,138 +80,160 @@ window.build=function(cfg){
     put(document.getElementById(id),{x:0,y:0,w:C.w,h:C.h});
   put(document.getElementById('tray'),trayBox);
 
-  // ---- flatten the config into one ordered event list -----------------------
-  const A=cfg.anim, picks=[], events=[];
-  cfg.rounds.forEach((r,ri)=>{
-    r.picks.forEach(p=>{picks.push({...p,round:ri}); events.push({...p,round:ri,kind:'pick'})});
-    events.push({t:r.enter,  round:ri,kind:'enter'});
-    events.push({t:r.heart,  round:ri,kind:'heart'});
-    events.push({t:r.restart,round:ri,kind:'restart'});
-  });
-  events.sort((a,b)=>a.t-b.t);
+  const picks=[];
+  cfg.rounds.forEach((r,ri)=>r.picks.forEach(p=>picks.push({...p,round:ri})));
 
-  // ---- tray column ---------------------------------------------------------
-  // A fixed catalogue in display order, scrolled so the item about to be picked
-  // lands on a different slot each time; picking always from the top slot reads
-  // like a machine, not a person.
-  const order=cfg.displayOrder;
-  const tray=document.getElementById('tray'), cells=[];
-  const colN=order.length;
-  for(let i=0;i<colN;i++){
-    const c=E('div','cell'); c.style.left='0px'; c.style.width=slot0.w+'px';
-    c.style.height=slot0.h+'px'; c.style.top=(i*pitch)+'px';
-    const im=new Image(); im.src=cfg.itemSrc[order[i]]; c.appendChild(im);
+  // ---- tray: catalogue grouped by garment type, so each round hunts it ----
+  const order=cfg.displayOrder, tray=document.getElementById('tray'), cells=[];
+  order.forEach((k,i)=>{
+    const c=E('div'); c.className='cell';
+    c.style.cssText=`left:0;width:${slot0.w}px;height:${slot0.h}px;top:${i*pitch}px`;
+    const im=new Image(); im.src=cfg.itemSrc[k]; c.appendChild(im);
     tray.appendChild(c); cells.push(c);
-  }
-  const maxScroll=Math.max(0,colN-ui.slots.length);
-  // The catalogue is grouped by garment type, not by pick order, so each round
-  // has to hunt up and down it. Scroll to sit the wanted item three slots down
-  // where it can; near either end of the list the clamp leaves it higher or
-  // lower instead, which is what makes the cursor move around the tray.
+  });
+  const maxScroll=Math.max(0,order.length-ui.slots.length);
   picks.forEach(p=>{
     const idx=order.indexOf(p.item);
-    p.scroll=clamp(idx-3,0,maxScroll);
+    p.scroll=clamp(idx-3,0,maxScroll);      // sit it three down where possible
     p.slot=idx-p.scroll;
-    p.cell=idx;
   });
 
-  // ---- canvas pieces -------------------------------------------------------
+  // ---- flat-lay pieces ----
   const flat=document.getElementById('flat');
+  const Z={feet:1,legs:2,top:3,topUnder:3,belt:4,jacket:5,wrist:6};
   picks.forEach(p=>{
-    const pl=cfg.places[p.place], d=E('div','piece');
+    const pl=cfg.places[p.place], d=E('div'); d.className='piece';
     const im=new Image(); im.src=cfg.itemSrc[p.item]; d.appendChild(im);
     const nat=cfg.itemSize[p.item];
     const h=pl.h*C.h*(p.s||1), w=h*nat[0]/nat[1];
-    d.style.width=w+'px'; d.style.height=h+'px';
-    d.style.left=(pl.cx*C.w-w/2)+'px'; d.style.top=(pl.cy*C.h-h/2)+'px';
-    d.style.zIndex=({feet:1,legs:2,top:3,belt:4,jacket:5,wrist:6})[p.place]||3;
+    d.style.cssText=`width:${w}px;height:${h}px;left:${pl.cx*C.w-w/2}px;`
+                   +`top:${pl.cy*C.h-h/2}px;z-index:${Z[p.place]||3}`;
     flat.appendChild(d); p.el=d;
   });
 
-  // ---- reveal shots --------------------------------------------------------
-  const shot=document.getElementById('shot');
-  cfg.rounds.forEach((r,ri)=>{
-    const d=E('div','piece'); const im=new Image(); im.src=cfg.revealSrc[r.reveal];
-    d.appendChild(im);
-    const [nw,nh]=cfg.revealSize[r.reveal];
-    // Contain-fit, allowing 6% of horizontal bleed so a pose with an arm held
-    // out loses a fingertip rather than shrinking the whole figure. A half-body
-    // plate is fitted on width and hangs from the top; full-length plates stand
-    // on the canvas floor, which lines their feet up even where the source
-    // framings disagree about how much of the frame the figure fills.
-    const sc = r.revealFit==='crop' ? (C.w*1.06)/nw
-                                    : Math.min((C.h*0.95)/nh,(C.w*1.06)/nw);
-    const w=nw*sc, h=nh*sc;
-    d.style.width=w+'px'; d.style.height=h+'px';
-    d.style.left=(C.w/2-w/2)+'px';
-    d.style.top=(r.revealFit==='crop' ? C.h*0.015 : C.h*0.975-h)+'px';
+  // ---- reveals, matched on head height ----
+  /* Scaling a cut-out by its bounding box lets an outstretched arm shrink the
+     whole figure and a half-body plate blow up to meet a full-length one. Head
+     height is pose-invariant and is what the eye reads as camera distance, so
+     scale on that, hang every figure from the crown, and put the torso - not
+     the bounding box - on the canvas midline. The four then read as one
+     camera, and the half-body plate becomes a tighter crop of that setup. */
+  const shot=document.getElementById('shot'), headPx=A.headTarget*C.h;
+  cfg.rounds.forEach(r=>{
+    const m=cfg.revealMetrics[r.reveal], k=headPx/m.headH;
+    const d=E('div'); d.className='piece';
+    const im=new Image(); im.src=cfg.revealSrc[r.reveal]; d.appendChild(im);
+    const w=m.w*k, h=m.h*k;
+    d.style.cssText=`width:${w}px;height:${h}px;`
+      +`left:${C.w/2-m.torsoCx*w}px;top:${C.h*0.035-m.headTop*k}px`;
+    if(r.revealFit==='crop'){
+      // a plate that stops at the thigh gets a soft lower edge, so it reads as
+      // canvas the program has not drawn yet rather than a torn photograph
+      const f='linear-gradient(to bottom,#000 78%,rgba(0,0,0,0) 99%)';
+      d.style.webkitMaskImage=f; d.style.maskImage=f;
+    }
     shot.appendChild(d); r.el=d;
   });
 
-  // ---- glitch slices -------------------------------------------------------
-  const gl=document.getElementById('glitch'), NS=30, slices=[];
+  // ---- glitch: displaced slices plus a chroma-split ghost pair ----
+  const gl=document.getElementById('glitch'), NS=36, slices=[];
   for(let i=0;i<NS;i++){
-    const s=E('div','slice');
-    s.style.top=(i*C.h/NS)+'px'; s.style.width=C.w+'px';
-    s.style.height=(C.h/NS+1)+'px'; s.style.backgroundSize=`${C.w}px ${C.h}px`;
+    const s=E('div'); s.className='slice';
+    s.style.cssText=`top:${i*C.h/NS}px;width:${C.w}px;height:${C.h/NS+1}px`;
     gl.appendChild(s); slices.push(s);
   }
+  const ghosts=[0,1].map(i=>{const g=E('div');g.className='ghost';
+    g.style.filter=i?'url(#none) sepia(1) hue-rotate(150deg) saturate(6)'
+                    :'sepia(1) hue-rotate(-40deg) saturate(6)';
+    gl.appendChild(g);return g});
+  const burn=document.getElementById('burn'); gl.appendChild(burn);
 
-  // ---- heart ---------------------------------------------------------------
-  const hb=M(ui.heart), hf=document.getElementById('heartFill');
-  put(hf,hb);
+  // ---- heart ----
+  const hb=M(ui.heart), hf=document.getElementById('heartFill'); put(hf,hb);
   hf.innerHTML='<svg viewBox="0 0 32 30"><path d="M16 29 3 16.5A8 8 0 0 1 16 6 8 8 0 0 1 29 16.5Z" fill="#C4232B"/></svg>';
 
-  // ---- cursor & logo -------------------------------------------------------
+  // ---- brand chips painted into the palette ----
+  const chips=cfg.brandSwatches.map((r,i)=>{
+    const b=M(r), d=E('div'); d.className='chip';
+    d.style.cssText=`left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;`
+                   +`background:${cfg.brandColours[i]}`;
+    stage.appendChild(d); return {el:d,box:b};
+  });
+  const ring=E('div','chipRing'); stage.appendChild(ring);
+
+  // ---- press overlays + tray selection ----
+  const pressEnter=E('div'); pressEnter.className='press'; put(pressEnter,M(ui.enter));
+  const pressRest =E('div'); pressRest.className='press';  put(pressRest,M(ui.restart));
+  stage.appendChild(pressEnter); stage.appendChild(pressRest);
+  const sel=document.getElementById('selCell');
+
+  // ---- cursor, end card ----
   const cur=document.getElementById('cursor');
   cur.querySelector('img').src=cfg.cursorSrc;
-  cur.style.width=(C.w*0.30)+'px';
-  const logo=document.getElementById('logo');
-  logo.textContent=cfg.endcard.text;
-  logo.style.left='0px'; logo.style.top='0px';
-  logo.style.width=C.w+'px'; logo.style.height=C.h+'px';
-  logo.style.fontSize=(cfg.endcard.h*C.h)+'px';
+  cur.style.width=(C.w*0.29)+'px';
+  const ec=document.getElementById('endcard'), word=document.getElementById('word');
+  word.textContent=cfg.endcard.text; word.style.fontSize=(cfg.endcard.h*C.h)+'px';
+  /* Size the range row off the canvas WIDTH, not its height: four portrait
+     tiles at a fixed height overflow a narrow canvas and the last colourway
+     clips off the end - which is the one thing this shot exists to show. */
+  const row=document.getElementById('swatchRow'), N=cfg.endcard.items.length;
+  const gap=C.w*0.025, tileW=(C.w*0.88-gap*(N-1))/N;
+  const aspect=cfg.itemSize[cfg.endcard.items[0]];
+  row.style.height=(tileW*aspect[1]/aspect[0])+'px'; row.style.gap=gap+'px';
+  const tiles=cfg.endcard.items.map(k=>{
+    const d=E('div'); d.style.height='100%'; d.style.width=tileW+'px';
+    const im=new Image(); im.src=cfg.itemSrc[k];
+    im.style.height='100%'; im.style.width='100%'; im.style.objectFit='contain';
+    d.appendChild(im); row.appendChild(d); return d;
+  });
 
-  // ---- cursor waypoints ----------------------------------------------------
-  const cellMid=i=>({x:trayBox.x+slot0.w/2,y:trayBox.y+i*pitch+slot0.h/2});
-  const mid=r=>{const b=M(r);return{x:b.x+b.w/2,y:b.y+b.h/2}};
+  // ---- cursor waypoints ----
+  const cellMid=i=>({x:trayBox.x+slot0.w/2, y:trayBox.y+i*pitch+slot0.h/2});
+  const mid=b=>({x:b.x+b.w/2,y:b.y+b.h/2});
   const way=[];
-  events.forEach(e=>{
-    if(e.kind==='pick'){const p=picks.find(q=>q.t===e.t&&q.item===e.item);
-      way.push({t:e.t,p:cellMid(p.slot)});}
-    else if(e.kind==='enter')  way.push({t:e.t,p:mid(ui.enter)});
-    else if(e.kind==='heart')  way.push({t:e.t,p:{x:hb.x+hb.w/2,y:hb.y+hb.h/2}});
-    else if(e.kind==='restart')way.push({t:e.t,p:mid(ui.restart)});
+  cfg.rounds.forEach((r,ri)=>{
+    way.push({t:r.swatchT,p:mid(chips[ri].box),kind:'swatch',ri});
+    r.picks.forEach(q=>{const p=picks.find(z=>z.round===ri&&z.item===q.item);
+      way.push({t:q.t,p:cellMid(p.slot),kind:'pick',slot:p.slot});});
+    way.push({t:r.enter,  p:mid(M(ui.enter)),  kind:'enter'});
+    way.push({t:r.heart,  p:mid(hb),           kind:'heart'});
+    way.push({t:r.restart,p:mid(M(ui.restart)),kind:'restart'});
   });
   way.sort((a,b)=>a.t-b.t);
 
-  S={cfg,A,C,W,H,picks,events,way,slices,tray,cells,pitch,maxScroll,
-     flat,shot,gl,hf,cur,logo,NS};
-  return {sc,C,trayBox};
+  S={cfg,A,C,picks,way,slices,ghosts,burn,cells,pitch,slot0,trayBox,
+     flat,shot,gl,hf,cur,ec,word,tiles,chips,ring,pressEnter,pressRest,sel,NS,headPx};
+  return {sc,C,trayBox,headPx:Math.round(headPx)};
 };
 
 window.setTime=function(t){
-  const {cfg,A,C,picks,way,slices,tray,flat,shot,gl,hf,cur,logo,NS}=S;
+  const {cfg,A,C,picks,way,slices,ghosts,burn,cells,pitch,slot0,trayBox,
+         flat,shot,gl,hf,cur,ec,word,tiles,chips,ring,pressEnter,pressRest,sel,NS}=S;
 
-  // Every round is evaluated on its own window. Asking "which round is it now"
-  // fails across a handover - the next round's lead-in starts before the
-  // previous round's restart glitch has finished, so one of them gets dropped.
+  /* Every round is judged on its own window. Asking "which round is it now"
+     breaks at a handover: the next round's lead-in overlaps the previous
+     round's restart glitch, and one of the two gets dropped. */
 
   // ---------- flat-lay pieces ----------
   picks.forEach(p=>{
     const r=cfg.rounds[p.round];
-    const on=t>=p.t+A.popLag && t<r.enter+A.revealLag;
-    if(!on){p.el.style.opacity=0;p.el.style.transform='scale(0)';return}
+    if(!(t>=p.t+A.popLag && t<r.enter+A.revealLag)){
+      p.el.style.opacity=0; p.el.style.transform='scale(0)'; return;
+    }
     const u=clamp((t-(p.t+A.popLag))/A.popDur);
     p.el.style.opacity=1;
     p.el.style.transform=`scale(${u>=1?1:back(u,A.popOvershoot)})`;
   });
 
-  // ---------- reveal ----------
+  // ---------- reveal, with a slow push-in so it is not a frozen still ----------
   let glitching=null;
   cfg.rounds.forEach((r,i)=>{
-    const from=r.enter+A.revealLag;
-    r.el.style.opacity=(t>=from && t<r.restart)?1:0;
+    const from=r.enter+A.revealLag, on=t>=from&&t<r.restart;
+    r.el.style.opacity=on?1:0;
+    if(on){
+      const u=clamp((t-from)/Math.max(.001,r.restart-from));
+      r.el.style.transform=`scale(${1+A.pushIn*u})`;
+    }
     if(t>=r.restart && t<r.restart+A.glitchDur) glitching={r,ri:i};
   });
 
@@ -203,41 +241,62 @@ window.setTime=function(t){
   if(glitching){
     const {r:R,ri}=glitching;
     const p=clamp((t-R.restart)/A.glitchDur), f=Math.floor(t*cfg.output.fps);
-    const el=R.el;
+    const el=R.el, src=`url(${cfg.revealSrc[R.reveal]})`;
     const bw=parseFloat(el.style.width), bh=parseFloat(el.style.height);
     const bx=parseFloat(el.style.left),  by=parseFloat(el.style.top);
     slices.forEach((s,i)=>{
-      if(p>rnd(i*3.1+ri*7.7)){s.style.opacity=0;return}   // this slice has burned away
+      if(p>rnd(i*3.1+ri*7.7)*0.92+0.05){s.style.opacity=0;return}  // burned away
       s.style.opacity=1;
-      s.style.backgroundImage=`url(${cfg.revealSrc[R.reveal]})`;
+      s.style.backgroundImage=src;
       s.style.backgroundSize=`${bw}px ${bh}px`;
       s.style.backgroundPosition=`${bx}px ${by-i*C.h/NS}px`;
-      const amp=C.w*0.55*p*(0.25+rnd(i*5.3+f*0.37));
+      const amp=C.w*0.60*p*(0.18+rnd(i*5.3+f*0.37));
       s.style.transform=`translateX(${(rnd(i*9.1+f*0.11)>0.5?1:-1)*amp}px)`;
-      s.style.filter=rnd(i*2.7+f*0.53)>0.72?'hue-rotate(80deg) saturate(2.4)':'none';
+      s.style.filter=rnd(i*2.7+f*0.53)>0.74?'invert(1) hue-rotate(90deg)':'none';
     });
-  }
-  gl.style.opacity=glitching?1:0;
-  shot.style.opacity=glitching?0:1;
+    // chroma split: the same plate pulled apart into two tinted copies
+    ghosts.forEach((g,i)=>{
+      g.style.backgroundImage=src;
+      g.style.backgroundSize=`${bw}px ${bh}px`;
+      g.style.backgroundPosition=`${bx+(i?1:-1)*C.w*0.05*p}px ${by}px`;
+      g.style.opacity=(1-p)*0.55;
+    });
+    burn.style.opacity=p<0.14?(0.14-p)/0.14*0.85:0;   // strike flash on impact
+    gl.style.opacity=1; shot.style.opacity=0;
+  } else { gl.style.opacity=0; shot.style.opacity=1; }
 
-  // ---------- heart ----------
-  hf.style.opacity=cfg.rounds.some(r=>t>=r.heart&&t<r.restart)?1:0;
+  // ---------- heart, with a pop as it fills ----------
+  const hr=cfg.rounds.find(r=>t>=r.heart&&t<r.restart);
+  if(hr){
+    const u=clamp((t-hr.heart)/0.26);
+    hf.style.opacity=1; hf.style.transform=`scale(${u>=1?1:back(u,2.4)})`;
+  } else hf.style.opacity=0;
+
+  // ---------- brand chip selection ----------
+  let cr=-1;
+  cfg.rounds.forEach((r,i)=>{ if(t>=r.swatchT) cr=i; });
+  if(cr>=0){
+    const b=chips[cr].box;
+    ring.style.cssText=`left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px`
+      +`;position:absolute;z-index:26;box-shadow:inset 2px 2px 0 rgba(0,0,0,.55),`
+      +`inset -2px -2px 0 rgba(255,255,255,.65);outline:2px solid #14307a;opacity:1`;
+  } else ring.style.opacity=0;
 
   // ---------- tray scroll ----------
   let scroll=picks[0].scroll;
   for(let i=0;i<picks.length;i++){
-    const nxt=picks[i+1];
     if(t<picks[i].t) break;
     scroll=picks[i].scroll;
+    const nxt=picks[i+1];
     if(nxt){
-      const u=clamp((t-(picks[i].t+0.15))/A.scrollDur);
+      const u=clamp((t-(picks[i].t+0.12))/A.scrollDur);
       scroll=picks[i].scroll+(nxt.scroll-picks[i].scroll)*easeIO(u);
     }
   }
-  S.cells.forEach(c=>{c.style.transform=`translateY(${-scroll*S.pitch}px)`});
+  cells.forEach(c=>{c.style.transform=`translateY(${-scroll*pitch}px)`});
 
-  // ---------- cursor ----------
-  let pos=way[0].p, press=0;
+  // ---------- cursor, press states, tray selection ----------
+  let pos=way[0].p, press=0, active=null;
   for(let i=0;i<way.length;i++){
     const a=way[i], b=way[i+1];
     if(t<a.t){ if(i===0) pos=a.p; break }
@@ -247,16 +306,31 @@ window.setTime=function(t){
       const u=clamp((t-start)/dur);
       pos={x:a.p.x+(b.p.x-a.p.x)*easeIO(u), y:a.p.y+(b.p.y-a.p.y)*easeIO(u)};
     }
-    if(t>=a.t && t<a.t+A.pressDur) press=Math.sin(clamp((t-a.t)/A.pressDur)*Math.PI);
+    if(t>=a.t && t<a.t+A.pressDur){
+      press=Math.sin(clamp((t-a.t)/A.pressDur)*Math.PI); active=a;
+    }
   }
-  cur.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${1-0.09*press})`;
+  cur.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${1-0.08*press})`;
+  pressEnter.style.opacity=(active&&active.kind==='enter')?1:0;
+  pressRest .style.opacity=(active&&active.kind==='restart')?1:0;
+  if(active&&active.kind==='pick'){
+    const scrolled=trayBox.y+active.slot*pitch+slot0.h/2;
+    sel.style.cssText=`position:absolute;z-index:30;opacity:1;left:${trayBox.x}px;`
+      +`top:${scrolled-slot0.h/2}px;width:${slot0.w}px;height:${slot0.h}px;`
+      +`outline:2px dotted #14307a;outline-offset:-3px;background:rgba(20,48,122,.24)`;
+  } else sel.style.opacity=0;
 
-  // ---------- end card ----------
-  const ec=cfg.endcard;
-  if(t>=ec.t){
-    const u=clamp((t-ec.t)/A.popDur);
-    logo.style.opacity=1;
-    logo.style.transform=`scale(${u>=1?1:back(u,A.popOvershoot)})`;
-  } else logo.style.opacity=0;
+  // ---------- end card: wordmark, then the range lines up ----------
+  const e=cfg.endcard;
+  if(t>=e.t){
+    ec.style.opacity=1;
+    const u=clamp((t-e.t)/A.popDur);
+    word.style.transform=`scale(${u>=1?1:back(u,A.popOvershoot)})`;
+    tiles.forEach((d,i)=>{
+      const v=clamp((t-(e.t+0.26+i*0.11))/0.34);
+      d.style.opacity=v>0?1:0;
+      d.style.transform=`scale(${v>=1?1:back(Math.max(v,0.001),1.4)})`;
+    });
+  } else ec.style.opacity=0;
 };
 </script>

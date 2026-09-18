@@ -64,15 +64,25 @@ def glitch(t, level=0.34, d=None):
     s += np.sin(2 * np.pi * 95 * np.arange(n) / SR) * env(n, 0.002, 0.12) * 0.35
     put(s / np.abs(s).max() * level, t)
 
+def land(t, level=0.12):
+    """The soft thump of a garment settling onto the canvas, a beat after its
+    click. Without it the pop reads as silent and the click feels unanswered."""
+    n = int(0.09 * SR); k = np.arange(n) / SR
+    s = (np.sin(2 * np.pi * 150 * k) * 0.6 + rng.normal(0, 1, n) * 0.4)
+    s *= np.exp(-k * 34)
+    put(s / np.abs(s).max() * level, t)
+
 for r in cfg['rounds']:
+    click(r['swatchT'], 0.22)                  # choosing the colourway
     for p in r['picks']:
         click(p['t'])
+        land(p['t'] + A['popLag'] + 0.04)
     click(r['enter'], 0.30)
     whoosh(r['enter'] + A['revealLag'] - 0.06)
     click(r['heart'], 0.20)
+    land(r['heart'] + 0.02, 0.09)
     click(r['restart'], 0.26)
     glitch(r['restart'])
-
 whoosh(cfg['endcard']['t'] - 0.05, 0.30)
 
 peak = np.abs(buf).max()

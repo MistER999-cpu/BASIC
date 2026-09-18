@@ -3,7 +3,7 @@
     "width": 1080,
     "height": 1920,
     "fps": 30,
-    "duration": 24.4,
+    "duration": 23.28,
     "crf": 17
   },
   "ui": "assets/video/final/ui",
@@ -11,14 +11,16 @@
   "reveals": "assets/video/final/reveals",
   "_note": "Times are seconds. `t` on a pick is the mouse-DOWN; the garment pops onto the canvas 0.35s later, the same lag the reference film uses so the click reads before its result.",
   "anim": {
-    "popLag": 0.35,
-    "popDur": 0.46,
+    "popLag": 0.32,
+    "popDur": 0.42,
     "popOvershoot": 1.06,
-    "cursorLead": 0.34,
-    "pressDur": 0.11,
+    "cursorLead": 0.22,
+    "pressDur": 0.1,
     "revealLag": 0.25,
     "glitchDur": 0.25,
-    "scrollDur": 0.3
+    "scrollDur": 0.28,
+    "headTarget": 0.142,
+    "pushIn": 0.018
   },
   "places": {
     "top": {
@@ -59,131 +61,149 @@
   },
   "rounds": [
     {
+      "key": "beige",
       "reveal": "reveal-beige",
-      "swatch": 9,
+      "tint": "#C3A793",
+      "swatch": 0,
+      "swatchT": 0.2,
       "picks": [
         {
           "item": "tank-beige",
           "place": "top",
-          "t": 0.3
+          "t": 0.7
         },
         {
           "item": "trousers-flares",
           "place": "legs",
-          "t": 1.15
+          "t": 1.32
         },
         {
           "item": "trainers-cream",
           "place": "feet",
-          "t": 2.0
+          "t": 1.94
         }
       ],
-      "enter": 2.95,
-      "heart": 3.95,
-      "restart": 5.15
+      "enter": 2.66,
+      "heart": 3.56,
+      "restart": 4.36
     },
     {
+      "key": "white",
       "reveal": "reveal-white",
-      "swatch": 14,
+      "tint": "#EBE4E8",
+      "swatch": 1,
+      "swatchT": 5.04,
       "picks": [
         {
           "item": "tank-white",
           "place": "top",
-          "t": 6.0
+          "t": 5.54
         },
         {
           "item": "trousers-pinstripe",
           "place": "legs",
-          "t": 6.85
+          "t": 6.12
         },
         {
           "item": "trainers-grey",
           "place": "feet",
-          "t": 7.7,
+          "t": 6.7,
           "s": 1.15
         }
       ],
-      "enter": 8.65,
-      "heart": 9.6,
-      "restart": 10.55
+      "enter": 7.42,
+      "heart": 8.32,
+      "restart": 9.12
     },
     {
+      "key": "black",
       "reveal": "reveal-black",
-      "swatch": 1,
-      "revealFit": "crop",
+      "tint": "#252327",
+      "swatch": 2,
+      "swatchT": 9.8,
       "picks": [
         {
           "item": "tank-black",
           "place": "topUnder",
-          "t": 11.35
+          "t": 10.3
         },
         {
           "item": "trousers-charcoal",
           "place": "legs",
-          "t": 11.9
+          "t": 10.82
         },
         {
           "item": "jacket-bomber",
           "place": "jacket",
-          "t": 12.45
+          "t": 11.34
         },
         {
           "item": "boots-black",
           "place": "feet",
-          "t": 13.0,
+          "t": 11.86,
           "s": 1.45
         },
         {
           "item": "cuff-gold",
           "place": "wrist",
-          "t": 13.55,
+          "t": 12.38,
           "s": 0.85
         }
       ],
-      "enter": 14.35,
-      "heart": 15.35,
-      "restart": 16.3
+      "enter": 13.1,
+      "heart": 14.0,
+      "restart": 14.8,
+      "revealFit": "crop"
     },
     {
+      "key": "brown",
       "reveal": "reveal-brown",
+      "tint": "#533429",
       "swatch": 3,
+      "swatchT": 15.48,
       "picks": [
         {
           "item": "tank-brown",
           "place": "topUnder",
-          "t": 17.1
+          "t": 15.98
         },
         {
           "item": "trousers-barrel",
           "place": "legs",
-          "t": 17.65
+          "t": 16.48
         },
         {
           "item": "jacket-suede",
           "place": "jacket",
-          "t": 18.2
+          "t": 16.98
         },
         {
           "item": "loafers-tan",
           "place": "feet",
-          "t": 18.75,
+          "t": 17.48,
           "s": 1.2
         },
         {
           "item": "belt-braided",
           "place": "belt",
-          "t": 19.3
+          "t": 17.98
         }
       ],
-      "enter": 20.1,
-      "heart": 21.1,
-      "restart": 22.05
+      "enter": 18.7,
+      "heart": 19.6,
+      "restart": 20.4
     }
   ],
   "endcard": {
-    "t": 22.5,
+    "t": 21.33,
     "text": "BASIC",
-    "h": 0.075
+    "h": 0.062,
+    "items": [
+      "tank-beige",
+      "tank-white",
+      "tank-black",
+      "tank-brown"
+    ]
   },
   "displayOrder": [
     "tank-beige",
@@ -202,5 +222,71 @@
     "loafers-tan",
     "belt-braided",
     "cuff-gold"
-  ]
+  ],
+  "brandSwatches": [
+    [
+      177,
+      2334,
+      65,
+      69
+    ],
+    [
+      274,
+      2350,
+      82,
+      80
+    ],
+    [
+      457,
+      2350,
+      82,
+      76
+    ],
+    [
+      550,
+      2350,
+      82,
+      80
+    ]
+  ],
+  "brandColours": [
+    "#C3A793",
+    "#EBE4E8",
+    "#252327",
+    "#533429"
+  ],
+  "revealMetrics": {
+    "reveal-beige": {
+      "w": 728,
+      "h": 2437,
+      "headTop": 0,
+      "headH": 394,
+      "torsoCx": 0.4775,
+      "heads": 6.19
+    },
+    "reveal-black": {
+      "w": 1449,
+      "h": 2571,
+      "headTop": 0,
+      "headH": 520,
+      "torsoCx": 0.4684,
+      "heads": 4.94
+    },
+    "reveal-brown": {
+      "w": 1211,
+      "h": 2214,
+      "headTop": 0,
+      "headH": 349,
+      "torsoCx": 0.4235,
+      "heads": 6.34
+    },
+    "reveal-white": {
+      "w": 955,
+      "h": 2345,
+      "headTop": 0,
+      "headH": 414,
+      "torsoCx": 0.5318,
+      "heads": 5.66
+    }
+  }
 }
