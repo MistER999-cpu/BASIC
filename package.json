@@ -10,7 +10,11 @@
     "cutout": "python3 tools/cutout.py",
     "onsets": "python3 tools/onsets.py assets/base/base.mp4",
     "standins": "node tools/standins.mjs",
-    "ingest": "python3 tools/ingest.py assets/incoming"
+    "ingest": "python3 tools/ingest.py assets/incoming",
+    "paint": "node src/paint/pipeline.mjs",
+    "paint:preview": "node tools/paint/preview.mjs",
+    "paint:prep": "python3 tools/paint/measure.py && python3 tools/paint/matte.py && python3 tools/paint/organise.py && python3 tools/paint/cursor.py",
+    "paint:sfx": "python3 tools/paint/sfx.py"
   },
   "repository": {
     "type": "git",

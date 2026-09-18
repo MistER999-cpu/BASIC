@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>paint spot</title>
+<style>
+  html,body{margin:0;padding:0;background:#E4E4E4;overflow:hidden}
+  #stage{position:relative;overflow:hidden;image-rendering:auto}
+  #ui{position:absolute;left:0;top:0;transform-origin:0 0}
+  .layer{position:absolute;overflow:hidden}
+  .piece{position:absolute;transform-origin:50% 50%;will-change:transform}
+  .piece img{width:100%;height:100%;object-fit:contain;display:block}
+  #tray .cell{position:absolute;display:flex;align-items:center;justify-content:center}
+  #tray .cell img{max-width:84%;max-height:84%;object-fit:contain;display:block}
+  #cursor{position:absolute;transform-origin:22% 6%;image-rendering:pixelated;z-index:40}
+  #cursor img{width:100%;display:block;image-rendering:pixelated}
+  #heartFill{position:absolute;z-index:20}
+  #heartFill svg{width:100%;height:100%;display:block}
+  .slice{position:absolute;left:0;background-repeat:no-repeat;will-change:transform}
+  #logo{position:absolute;display:flex;align-items:center;justify-content:center;
+        font-family:Helvetica,Arial,sans-serif;font-weight:600;color:#111;
+        letter-spacing:.28em;text-indent:.28em;white-space:nowrap}
+</style>
+<div id="stage">
+  <img id="ui">
+  <div class="layer" id="tray"></div>
+  <div class="layer" id="canvas">
+    <div class="layer" id="flat"></div>
+    <div class="layer" id="shot"></div>
+    <div class="layer" id="glitch"></div>
+    <div id="logo"></div>
+  </div>
+  <div id="heartFill"></div>
+  <div id="cursor"><img></div>
+</div>
+<script>
+const E=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const easeIO=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+const easeOut=u=>1-Math.pow(1-u,3);
+/* back-ease: overshoot then settle, the little bounce each garment lands with */
+function back(u,over){const s=1.70158*over;return 1+ (s+1)*Math.pow(u-1,3)+s*Math.pow(u-1,2)}
+/* deterministic per-frame noise so every render of frame N is identical */
+function rnd(n){let x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x)}
+
+let S=null;
+
+window.build=function(cfg){
+  const {width:W,height:H}=cfg.output, ui=cfg.uiGeom;
+  const stage=document.getElementById('stage');
+  stage.style.width=W+'px'; stage.style.height=H+'px';
+
+  // one uniform cover-fit from the generated window image into the output frame
+  const sc=Math.max(W/ui.w,H/ui.h), ox=(W-ui.w*sc)/2, oy=(H-ui.h*sc)/2;
+  const M=r=>({x:r[0]*sc+ox,y:r[1]*sc+oy,w:r[2]*sc,h:r[3]*sc});
+  const uiImg=document.getElementById('ui');
+  uiImg.src=cfg.uiSrc; uiImg.style.width=ui.w*sc+'px';
+  uiImg.style.transform=`translate(${ox}px,${oy}px)`;
+
+  const C=M(ui.canvas), slot0=M(ui.slots[0]), pitch=(ui.slots[1][1]-ui.slots[0][1])*sc;
+  const trayBox={x:slot0.x,y:slot0.y,w:slot0.w,h:pitch*ui.slots.length};
+  const put=(el,b)=>{el.style.left=b.x+'px';el.style.top=b.y+'px';
+                     el.style.width=b.w+'px';el.style.height=b.h+'px'};
+  put(document.getElementById('canvas'),C);
+  for(const id of['flat','shot','glitch'])
+    put(document.getElementById(id),{x:0,y:0,w:C.w,h:C.h});
+  put(document.getElementById('tray'),trayBox);
+
+  // ---- flatten the config into one ordered event list -----------------------
+  const A=cfg.anim, picks=[], events=[];
+  cfg.rounds.forEach((r,ri)=>{
+    r.picks.forEach(p=>{picks.push({...p,round:ri}); events.push({...p,round:ri,kind:'pick'})});
+    events.push({t:r.enter,  round:ri,kind:'enter'});
+    events.push({t:r.heart,  round:ri,kind:'heart'});
+    events.push({t:r.restart,round:ri,kind:'restart'});
+  });
+  events.sort((a,b)=>a.t-b.t);
+
+  // ---- tray column ---------------------------------------------------------
+  // A fixed catalogue in display order, scrolled so the item about to be picked
+  // lands on a different slot each time; picking always from the top slot reads
+  // like a machine, not a person.
+  const order=cfg.displayOrder;
+  const tray=document.getElementById('tray'), cells=[];
+  const colN=order.length;
+  for(let i=0;i<colN;i++){
+    const c=E('div','cell'); c.style.left='0px'; c.style.width=slot0.w+'px';
+    c.style.height=slot0.h+'px'; c.style.top=(i*pitch)+'px';
+    const im=new Image(); im.src=cfg.itemSrc[order[i]]; c.appendChild(im);
+    tray.appendChild(c); cells.push(c);
+  }
+  const maxScroll=Math.max(0,colN-ui.slots.length);
+  // The catalogue is grouped by garment type, not by pick order, so each round
+  // has to hunt up and down it. Scroll to sit the wanted item three slots down
+  // where it can; near either end of the list the clamp leaves it higher or
+  // lower instead, which is what makes the cursor move around the tray.
+  picks.forEach(p=>{
+    const idx=order.indexOf(p.item);
+    p.scroll=clamp(idx-3,0,maxScroll);
+    p.slot=idx-p.scroll;
+    p.cell=idx;
+  });
+
+  // ---- canvas pieces -------------------------------------------------------
+  const flat=document.getElementById('flat');
+  picks.forEach(p=>{
+    const pl=cfg.places[p.place], d=E('div','piece');
+    const im=new Image(); im.src=cfg.itemSrc[p.item]; d.appendChild(im);
+    const nat=cfg.itemSize[p.item];
+    const h=pl.h*C.h*(p.s||1), w=h*nat[0]/nat[1];
+    d.style.width=w+'px'; d.style.height=h+'px';
+    d.style.left=(pl.cx*C.w-w/2)+'px'; d.style.top=(pl.cy*C.h-h/2)+'px';
+    d.style.zIndex=({feet:1,legs:2,top:3,belt:4,jacket:5,wrist:6})[p.place]||3;
+    flat.appendChild(d); p.el=d;
+  });
+
+  // ---- reveal shots --------------------------------------------------------
+  const shot=document.getElementById('shot');
+  cfg.rounds.forEach((r,ri)=>{
+    const d=E('div','piece'); const im=new Image(); im.src=cfg.revealSrc[r.reveal];
+    d.appendChild(im);
+    const [nw,nh]=cfg.revealSize[r.reveal];
+    // Contain-fit, allowing 6% of horizontal bleed so a pose with an arm held
+    // out loses a fingertip rather than shrinking the whole figure. A half-body
+    // plate is fitted on width and hangs from the top; full-length plates stand
+    // on the canvas floor, which lines their feet up even where the source
+    // framings disagree about how much of the frame the figure fills.
+    const sc = r.revealFit==='crop' ? (C.w*1.06)/nw
+                                    : Math.min((C.h*0.95)/nh,(C.w*1.06)/nw);
+    const w=nw*sc, h=nh*sc;
+    d.style.width=w+'px'; d.style.height=h+'px';
+    d.style.left=(C.w/2-w/2)+'px';
+    d.style.top=(r.revealFit==='crop' ? C.h*0.015 : C.h*0.975-h)+'px';
+    shot.appendChild(d); r.el=d;
+  });
+
+  // ---- glitch slices -------------------------------------------------------
+  const gl=document.getElementById('glitch'), NS=30, slices=[];
+  for(let i=0;i<NS;i++){
+    const s=E('div','slice');
+    s.style.top=(i*C.h/NS)+'px'; s.style.width=C.w+'px';
+    s.style.height=(C.h/NS+1)+'px'; s.style.backgroundSize=`${C.w}px ${C.h}px`;
+    gl.appendChild(s); slices.push(s);
+  }
+
+  // ---- heart ---------------------------------------------------------------
+  const hb=M(ui.heart), hf=document.getElementById('heartFill');
+  put(hf,hb);
+  hf.innerHTML='<svg viewBox="0 0 32 30"><path d="M16 29 3 16.5A8 8 0 0 1 16 6 8 8 0 0 1 29 16.5Z" fill="#C4232B"/></svg>';
+
+  // ---- cursor & logo -------------------------------------------------------
+  const cur=document.getElementById('cursor');
+  cur.querySelector('img').src=cfg.cursorSrc;
+  cur.style.width=(C.w*0.30)+'px';
+  const logo=document.getElementById('logo');
+  logo.textContent=cfg.endcard.text;
+  logo.style.left='0px'; logo.style.top='0px';
+  logo.style.width=C.w+'px'; logo.style.height=C.h+'px';
+  logo.style.fontSize=(cfg.endcard.h*C.h)+'px';
+
+  // ---- cursor waypoints ----------------------------------------------------
+  const cellMid=i=>({x:trayBox.x+slot0.w/2,y:trayBox.y+i*pitch+slot0.h/2});
+  const mid=r=>{const b=M(r);return{x:b.x+b.w/2,y:b.y+b.h/2}};
+  const way=[];
+  events.forEach(e=>{
+    if(e.kind==='pick'){const p=picks.find(q=>q.t===e.t&&q.item===e.item);
+      way.push({t:e.t,p:cellMid(p.slot)});}
+    else if(e.kind==='enter')  way.push({t:e.t,p:mid(ui.enter)});
+    else if(e.kind==='heart')  way.push({t:e.t,p:{x:hb.x+hb.w/2,y:hb.y+hb.h/2}});
+    else if(e.kind==='restart')way.push({t:e.t,p:mid(ui.restart)});
+  });
+  way.sort((a,b)=>a.t-b.t);
+
+  S={cfg,A,C,W,H,picks,events,way,slices,tray,cells,pitch,maxScroll,
+     flat,shot,gl,hf,cur,logo,NS};
+  return {sc,C,trayBox};
+};
+
+window.setTime=function(t){
+  const {cfg,A,C,picks,way,slices,tray,flat,shot,gl,hf,cur,logo,NS}=S;
+
+  // Every round is evaluated on its own window. Asking "which round is it now"
+  // fails across a handover - the next round's lead-in starts before the
+  // previous round's restart glitch has finished, so one of them gets dropped.
+
+  // ---------- flat-lay pieces ----------
+  picks.forEach(p=>{
+    const r=cfg.rounds[p.round];
+    const on=t>=p.t+A.popLag && t<r.enter+A.revealLag;
+    if(!on){p.el.style.opacity=0;p.el.style.transform='scale(0)';return}
+    const u=clamp((t-(p.t+A.popLag))/A.popDur);
+    p.el.style.opacity=1;
+    p.el.style.transform=`scale(${u>=1?1:back(u,A.popOvershoot)})`;
+  });
+
+  // ---------- reveal ----------
+  let glitching=null;
+  cfg.rounds.forEach((r,i)=>{
+    const from=r.enter+A.revealLag;
+    r.el.style.opacity=(t>=from && t<r.restart)?1:0;
+    if(t>=r.restart && t<r.restart+A.glitchDur) glitching={r,ri:i};
+  });
+
+  // ---------- glitch ----------
+  if(glitching){
+    const {r:R,ri}=glitching;
+    const p=clamp((t-R.restart)/A.glitchDur), f=Math.floor(t*cfg.output.fps);
+    const el=R.el;
+    const bw=parseFloat(el.style.width), bh=parseFloat(el.style.height);
+    const bx=parseFloat(el.style.left),  by=parseFloat(el.style.top);
+    slices.forEach((s,i)=>{
+      if(p>rnd(i*3.1+ri*7.7)){s.style.opacity=0;return}   // this slice has burned away
+      s.style.opacity=1;
+      s.style.backgroundImage=`url(${cfg.revealSrc[R.reveal]})`;
+      s.style.backgroundSize=`${bw}px ${bh}px`;
+      s.style.backgroundPosition=`${bx}px ${by-i*C.h/NS}px`;
+      const amp=C.w*0.55*p*(0.25+rnd(i*5.3+f*0.37));
+      s.style.transform=`translateX(${(rnd(i*9.1+f*0.11)>0.5?1:-1)*amp}px)`;
+      s.style.filter=rnd(i*2.7+f*0.53)>0.72?'hue-rotate(80deg) saturate(2.4)':'none';
+    });
+  }
+  gl.style.opacity=glitching?1:0;
+  shot.style.opacity=glitching?0:1;
+
+  // ---------- heart ----------
+  hf.style.opacity=cfg.rounds.some(r=>t>=r.heart&&t<r.restart)?1:0;
+
+  // ---------- tray scroll ----------
+  let scroll=picks[0].scroll;
+  for(let i=0;i<picks.length;i++){
+    const nxt=picks[i+1];
+    if(t<picks[i].t) break;
+    scroll=picks[i].scroll;
+    if(nxt){
+      const u=clamp((t-(picks[i].t+0.15))/A.scrollDur);
+      scroll=picks[i].scroll+(nxt.scroll-picks[i].scroll)*easeIO(u);
+    }
+  }
+  S.cells.forEach(c=>{c.style.transform=`translateY(${-scroll*S.pitch}px)`});
+
+  // ---------- cursor ----------
+  let pos=way[0].p, press=0;
+  for(let i=0;i<way.length;i++){
+    const a=way[i], b=way[i+1];
+    if(t<a.t){ if(i===0) pos=a.p; break }
+    pos=a.p;
+    if(b){
+      const start=a.t+A.pressDur, dur=Math.max(0.12,(b.t-A.cursorLead)-start);
+      const u=clamp((t-start)/dur);
+      pos={x:a.p.x+(b.p.x-a.p.x)*easeIO(u), y:a.p.y+(b.p.y-a.p.y)*easeIO(u)};
+    }
+    if(t>=a.t && t<a.t+A.pressDur) press=Math.sin(clamp((t-a.t)/A.pressDur)*Math.PI);
+  }
+  cur.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${1-0.09*press})`;
+
+  // ---------- end card ----------
+  const ec=cfg.endcard;
+  if(t>=ec.t){
+    const u=clamp((t-ec.t)/A.popDur);
+    logo.style.opacity=1;
+    logo.style.transform=`scale(${u>=1?1:back(u,A.popOvershoot)})`;
+  } else logo.style.opacity=0;
+};
+</script>

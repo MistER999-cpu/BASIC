@@ -1,0 +1,206 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 24.4,
+    "crf": 17
+  },
+  "ui": "assets/video/final/ui",
+  "items": "assets/video/final/items",
+  "reveals": "assets/video/final/reveals",
+  "_note": "Times are seconds. `t` on a pick is the mouse-DOWN; the garment pops onto the canvas 0.35s later, the same lag the reference film uses so the click reads before its result.",
+  "anim": {
+    "popLag": 0.35,
+    "popDur": 0.46,
+    "popOvershoot": 1.06,
+    "cursorLead": 0.34,
+    "pressDur": 0.11,
+    "revealLag": 0.25,
+    "glitchDur": 0.25,
+    "scrollDur": 0.3
+  },
+  "places": {
+    "top": {
+      "cx": 0.5,
+      "cy": 0.2,
+      "h": 0.28
+    },
+    "topUnder": {
+      "cx": 0.5,
+      "cy": 0.145,
+      "h": 0.25
+    },
+    "jacket": {
+      "cx": 0.5,
+      "cy": 0.285,
+      "h": 0.27
+    },
+    "legs": {
+      "cx": 0.5,
+      "cy": 0.655,
+      "h": 0.45
+    },
+    "feet": {
+      "cx": 0.5,
+      "cy": 0.945,
+      "h": 0.105
+    },
+    "belt": {
+      "cx": 0.5,
+      "cy": 0.452,
+      "h": 0.052
+    },
+    "wrist": {
+      "cx": 0.84,
+      "cy": 0.52,
+      "h": 0.09
+    }
+  },
+  "rounds": [
+    {
+      "reveal": "reveal-beige",
+      "swatch": 9,
+      "picks": [
+        {
+          "item": "tank-beige",
+          "place": "top",
+          "t": 0.3
+        },
+        {
+          "item": "trousers-flares",
+          "place": "legs",
+          "t": 1.15
+        },
+        {
+          "item": "trainers-cream",
+          "place": "feet",
+          "t": 2.0
+        }
+      ],
+      "enter": 2.95,
+      "heart": 3.95,
+      "restart": 5.15
+    },
+    {
+      "reveal": "reveal-white",
+      "swatch": 14,
+      "picks": [
+        {
+          "item": "tank-white",
+          "place": "top",
+          "t": 6.0
+        },
+        {
+          "item": "trousers-pinstripe",
+          "place": "legs",
+          "t": 6.85
+        },
+        {
+          "item": "trainers-grey",
+          "place": "feet",
+          "t": 7.7,
+          "s": 1.15
+        }
+      ],
+      "enter": 8.65,
+      "heart": 9.6,
+      "restart": 10.55
+    },
+    {
+      "reveal": "reveal-black",
+      "swatch": 1,
+      "revealFit": "crop",
+      "picks": [
+        {
+          "item": "tank-black",
+          "place": "topUnder",
+          "t": 11.35
+        },
+        {
+          "item": "trousers-charcoal",
+          "place": "legs",
+          "t": 11.9
+        },
+        {
+          "item": "jacket-bomber",
+          "place": "jacket",
+          "t": 12.45
+        },
+        {
+          "item": "boots-black",
+          "place": "feet",
+          "t": 13.0,
+          "s": 1.45
+        },
+        {
+          "item": "cuff-gold",
+          "place": "wrist",
+          "t": 13.55,
+          "s": 0.85
+        }
+      ],
+      "enter": 14.35,
+      "heart": 15.35,
+      "restart": 16.3
+    },
+    {
+      "reveal": "reveal-brown",
+      "swatch": 3,
+      "picks": [
+        {
+          "item": "tank-brown",
+          "place": "topUnder",
+          "t": 17.1
+        },
+        {
+          "item": "trousers-barrel",
+          "place": "legs",
+          "t": 17.65
+        },
+        {
+          "item": "jacket-suede",
+          "place": "jacket",
+          "t": 18.2
+        },
+        {
+          "item": "loafers-tan",
+          "place": "feet",
+          "t": 18.75,
+          "s": 1.2
+        },
+        {
+          "item": "belt-braided",
+          "place": "belt",
+          "t": 19.3
+        }
+      ],
+      "enter": 20.1,
+      "heart": 21.1,
+      "restart": 22.05
+    }
+  ],
+  "endcard": {
+    "t": 22.5,
+    "text": "BASIC",
+    "h": 0.075
+  },
+  "displayOrder": [
+    "tank-beige",
+    "tank-white",
+    "tank-black",
+    "tank-brown",
+    "jacket-bomber",
+    "jacket-suede",
+    "trousers-flares",
+    "trousers-pinstripe",
+    "trousers-charcoal",
+    "trousers-barrel",
+    "trainers-cream",
+    "trainers-grey",
+    "boots-black",
+    "loafers-tan",
+    "belt-braided",
+    "cuff-gold"
+  ]
+}

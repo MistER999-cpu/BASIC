@@ -1,0 +1,22 @@
+{
+ "items": {
+  "belt-braided": "assets/video/final/items/belt-braided.png",
+  "boots-black": "assets/video/final/items/boots-black.png",
+  "trousers-barrel": "assets/video/final/items/trousers-barrel.png",
+  "trousers-charcoal": "assets/video/final/items/trousers-charcoal.png",
+  "jacket-bomber": "assets/video/final/items/jacket-bomber.png",
+  "cuff-gold": "assets/video/final/items/cuff-gold.png",
+  "trainers-grey": "assets/video/final/items/trainers-grey.png",
+  "trousers-pinstripe": "assets/video/final/items/trousers-pinstripe.png",
+  "trainers-cream": "assets/video/final/items/trainers-cream.png",
+  "jacket-suede": "assets/video/final/items/jacket-suede.png",
+  "loafers-tan": "assets/video/final/items/loafers-tan.png",
+  "trousers-flares": "assets/video/final/items/trousers-flares.png"
+ },
+ "reveals": {
+  "reveal-black": "assets/video/final/reveals/reveal-black.png",
+  "reveal-brown": "assets/video/final/reveals/reveal-brown.png",
+  "reveal-white": "assets/video/final/reveals/reveal-white.png",
+  "reveal-beige": "assets/video/final/reveals/reveal-beige.png"
+ }
+}
