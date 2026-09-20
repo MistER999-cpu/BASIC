@@ -66,3 +66,18 @@ Changes from v1:
   - 1.8% push-in, film grain, global vignette, mild contrast
 
 Scripts: 03_work/matte2.py, 03_work/build2.py
+
+## v3 build
+
+04_output/one_tank_v3.mp4 — 1080x1920, 10s, 24fps, 4.3 MB. Adds branding.
+
+  logo      BASIC ESSENTIALS, 32% frame width, y 5.8%-14.2%
+            keyed from the supplied PNG's own alpha channel, ink forced black
+  headline  "Un seul pack"     Bodoni Moda 400 roman,  108px, baseline 25.3%
+  footer    "plusieurs looks"  Bodoni Moda 400 italic, 110px, baseline 83.6%
+
+Type is composited after the render, so it stays pixel-sharp and does not
+ride the push-in. Fonts in 03_work/fonts (Bodoni Moda + Playfair Display,
+OFL, via @fontsource on npm, woff2 converted to ttf with fonttools).
+
+Script: 03_work/overlay.py
