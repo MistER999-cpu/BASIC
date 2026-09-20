@@ -1,0 +1,10 @@
+# Campaign media — large binaries, kept out of git.
+# The folder structure is tracked via .gitkeep files.
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.tif
+*.tiff
