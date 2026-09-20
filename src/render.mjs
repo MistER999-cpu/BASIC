@@ -5,7 +5,7 @@ import { readFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export async function renderFrames({ cfg, plateDir, outDir, onProgress }) {
+export async function renderFrames({ cfg, plateDir, outDir, onProgress, scene = 'src/scene.html' }) {
   const { width:W, height:H, fps, subframes, duration } = cfg.output;
   mkdirSync(outDir, { recursive: true });
 
@@ -19,7 +19,7 @@ export async function renderFrames({ cfg, plateDir, outDir, onProgress }) {
     deviceScaleFactor: 1,
   });
 
-  await page.goto(pathToFileURL(resolve('src/scene.html')).href, { waitUntil: 'load' });
+  await page.goto(pathToFileURL(resolve(scene)).href, { waitUntil: 'load' });
   const geom = await page.evaluate(c => window.build(c, null), absolutizeAssets(cfg));
 
   // make sure every product image has decoded before the first capture

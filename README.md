@@ -7,6 +7,99 @@ This repository holds two things:
 - **The liquid-glass slot reveal** — the render pipeline documented below, which
   composites the product colourways onto vertical footage.
 
+- **[`src/outfit.html`](src/outfit.html) — the outfit builder.** The two-slot
+  mix-and-match reel documented below the slot reveal.
+
+---
+
+# Outfit builder
+
+Two slots, a fake Google search bar, and a blue chevron either side of each.
+Every cut changes exactly one slot, alternating top and bottom, so the
+unchanged half anchors the change and the cut reads as styling rather than as
+a slide advancing. Four tank colourways and eight bottoms make 15 cuts and 16
+states in 10.00s, and advertise 32 outfits while showing 16.
+
+```bash
+python3 tools/tops.py                                # tank cutouts -> assets/tops
+python3 tools/bottoms.py assets/incoming/bottoms     # bottoms       -> assets/bottoms
+npm run outfit                                       # -> out/outfit.mp4
+```
+
+Renders in about a minute. There is no motion to blur and no footage to
+composite over, so `src/outfit-pipeline.mjs` skips the plate step, runs at
+`subframes: 1`, and goes straight from frames to H.264.
+
+## Everything is a hard cut
+
+Measured off the reference clip frame by frame: no easing anywhere, no
+crossfade, no slide. A garment swap lands inside a single frame, and the only
+other thing that moves is the arrow. It scales to 0.70 for exactly four frames
+and snaps back on the cut frame itself — two states, no tween, colour
+unchanged while pressed. Only the right arrows are ever pressed; the browse
+never goes backwards.
+
+Cuts sit 0.583s apart with a 0.60s opening hold. The reference closes on
+0.67s; this one closes on 1.238s, which is what puts eight bottoms on exactly
+10.00s and gives the last phrase a beat to sit on.
+
+## Bottoms are scaled by their waistband
+
+The tank colourways share a canvas, so one box fits all four. The bottoms do
+not: eight garments from eight sources, at eight arbitrary photographic
+scales. Scaling each to fill the slot would stretch a pair of jorts to
+trouser length and destroy the one silhouette contrast in the set; scaling by
+the widest point would shrink a wide-leg trouser to match a pair of leggings.
+
+`tools/bottoms.py` measures the waistband instead — roughly constant across
+women's bottoms — and `config.outfit.json` sets `waistPx`. Lengths then fall
+out at true relative scale: the jorts render 137px tall against 482px for the
+black pleated trouser. `maxLen` clamps anything that would still overrun the
+frame.
+
+Two things that band gets wrong if it is placed carelessly. Measured across
+the top 3-11% it runs through belts and pleat cinches — the cream trouser
+narrows to 96px at 8% of its height against 183px at its top edge, which made
+it read as half again as long per waist as anything else in the set. The top
+1-5% is above all of that. And the closing kernel has to stay near 0.8% of the
+frame, not the 2.5% the tank matte uses: at 2.5% it bridges the gap between
+two trouser legs at the crotch, `binary_fill_holes` floods the gap, and the
+garment ships with an opaque wedge of backdrop between its legs.
+
+Carving flooded regions back out afterwards is the obvious fix and is wrong. A
+print containing backdrop-coloured pixels loses them — the daisy skirt mattes
+into lace, because its scalloped hem connects the white of the print to the
+white outside it.
+
+## The four tanks are pinned to one silhouette
+
+The colourways were generated, not photographed four times, and they drift:
+pairwise silhouette IoU runs 0.94-0.99, hem widths spread 57px across a 1091px
+garment. The pairs cluster — brown/black at 0.988, white/beige at 0.977, but
+only 0.94 across that divide — which is two seeds, not one garment.
+
+That drift did not matter for the slot reveal, where the reels are in motion.
+Here the top slot changes colour and nothing else, so anything else that moves
+on the cut reads as a glitch. `tools/tops.py` intersects the four alphas.
+Using any single mask, or their union, would push past the garment on the
+others and composite backdrop into the edge; the intersection can only fall
+inside all four, at a cost of 5.9% of area on beige down to 0.9% on black, all
+of it in a thin band at the outer edge.
+
+## The typing is deterministic
+
+`render.mjs` steps the page with `setTime(t)` and screenshots, so a re-render
+has to match the last one frame for frame. Nothing in the typing may touch
+`Math.random`: per-character rhythm comes from a hash of the phrase and
+character index, weights are normalised so the jitter never changes a phrase's
+total duration, and a character following a space gets extra delay because
+real typing pauses between words. The caret holds solid while keys are moving
+and blinks only while a phrase sits — a caret that blinks through its own
+typing reads as a dropped frame.
+
+One font size is fitted to the longest phrase at build time. Resizing
+mid-phrase to make a long one fit would be visible on every character.
+
 ---
 
 # Liquid-glass slot reveal

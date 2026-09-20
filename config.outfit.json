@@ -1,0 +1,134 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1080,
+    "fps": 30,
+    "subframes": 1,
+    "duration": 10.0,
+    "crf": 16
+  },
+  "page": {
+    "bg": "#F7F8F2",
+    "blue": "#4285F4",
+    "textColor": "#A0AEBE"
+  },
+  "search": {
+    "pill": {
+      "w": 480,
+      "h": 52,
+      "top": 70,
+      "radius": 26
+    },
+    "fontMax": 26,
+    "phrases": [
+      {
+        "text": "BASIC",
+        "typeMs": 78,
+        "holdMs": 1050,
+        "delMs": 34
+      },
+      {
+        "text": "look pour toujours",
+        "typeMs": 55,
+        "holdMs": 1150,
+        "delMs": 26
+      },
+      {
+        "text": "l’essentiel",
+        "typeMs": 62,
+        "holdMs": 1180,
+        "delMs": 30
+      },
+      {
+        "text": "l’élégance c’est la simplicité",
+        "typeMs": 46,
+        "holdMs": 0,
+        "delMs": 0
+      }
+    ],
+    "startMs": 150,
+    "gapMs": 110,
+    "caretBlinkMs": 530,
+    "jitter": 0.42
+  },
+  "slots": {
+    "top": {
+      "cy": 325,
+      "maxH": 350
+    },
+    "bottom": {
+      "waistY": 528,
+      "waistPx": 108,
+      "maxLen": 495
+    },
+    "arrow": {
+      "w": 38,
+      "h": 48,
+      "stroke": 7,
+      "leftCx": 372,
+      "rightCx": 708,
+      "topCy": 325,
+      "botCy": 623,
+      "pressScale": 0.7,
+      "pressFrames": 4
+    }
+  },
+  "tops": [
+    {
+      "name": "white",
+      "src": "assets/tops/white.png"
+    },
+    {
+      "name": "brown",
+      "src": "assets/tops/brown.png"
+    },
+    {
+      "name": "beige",
+      "src": "assets/tops/beige.png"
+    },
+    {
+      "name": "black",
+      "src": "assets/tops/black.png"
+    }
+  ],
+  "bottoms": [
+    {
+      "name": "cream pleated wide-leg",
+      "src": "assets/bottoms/an-elegent-class-bottow-wear.png"
+    },
+    {
+      "name": "denim jorts",
+      "src": "assets/bottoms/olivia-jorts-raw-blue-l.png"
+    },
+    {
+      "name": "brown pinstripe",
+      "src": "assets/bottoms/téléchargé-20.png"
+    },
+    {
+      "name": "daisy midi skirt",
+      "src": "assets/bottoms/daisy.png"
+    },
+    {
+      "name": "light-wash wide leg",
+      "src": "assets/bottoms/wide-leg-jeans.png"
+    },
+    {
+      "name": "alien flare denim",
+      "src": "assets/bottoms/alien-denim-cute-pants.png"
+    },
+    {
+      "name": "black pleated wide-leg",
+      "src": "assets/bottoms/téléchargé-21.png"
+    },
+    {
+      "name": "brown linen wide-leg",
+      "src": "assets/bottoms/women-s-wide-leg-pants-sewing-pattern-el.png"
+    }
+  ],
+  "timeline": {
+    "openHold": 0.6,
+    "cadence": 0.583,
+    "closeHold": 1.238
+  },
+  "_timing_note": "Measured off the reference clip: 0.50s before the first press, cuts every 0.583s (sigma 0.03), arrows scale to 0.70 for 4 frames and snap back on the cut frame itself, no easing anywhere. The reference closes on 0.67s; this one closes on 1.238s so 8 bottoms land on exactly 10.00s, and the longer beat carries the final phrase."
+}

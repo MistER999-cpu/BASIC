@@ -10,7 +10,10 @@
     "cutout": "python3 tools/cutout.py",
     "onsets": "python3 tools/onsets.py assets/base/base.mp4",
     "standins": "node tools/standins.mjs",
-    "ingest": "python3 tools/ingest.py assets/incoming"
+    "ingest": "python3 tools/ingest.py assets/incoming",
+    "outfit": "node src/outfit-pipeline.mjs",
+    "bottoms": "python3 tools/bottoms.py assets/incoming/bottoms",
+    "tops": "python3 tools/tops.py"
   },
   "repository": {
     "type": "git",

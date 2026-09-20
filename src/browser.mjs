@@ -54,11 +54,16 @@ export function absolutizeAssets(cfg) {
     if (!existsSync(p)) throw new Error(`lever track not found: ${out.lever.file}`);
     Object.assign(out.lever, JSON.parse(readFileSync(p, 'utf8')));
   }
-  out.products = out.products.map(p => {
-    if (/^(file|https?|data):/.test(p.src)) return p;
-    const abs = resolve(p.src);
-    if (!existsSync(abs)) throw new Error(`Product asset not found: ${p.src}`);
-    return { ...p, src: pathToFileURL(abs).href };
-  });
+  /* the slot scene keeps its garments under `products`; the outfit scene
+     splits them into `tops` and `bottoms`, so rewrite whichever is present */
+  for (const key of ['products', 'tops', 'bottoms']) {
+    if (!Array.isArray(out[key])) continue;
+    out[key] = out[key].map(p => {
+      if (/^(file|https?|data):/.test(p.src)) return p;
+      const abs = resolve(p.src);
+      if (!existsSync(abs)) throw new Error(`Product asset not found: ${p.src}`);
+      return { ...p, src: pathToFileURL(abs).href };
+    });
+  }
   return out;
 }

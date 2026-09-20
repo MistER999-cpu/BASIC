@@ -1,0 +1,30 @@
+[
+  {
+    "name": "white",
+    "file": "assets/tops/white.png",
+    "w": 1096,
+    "h": 1739,
+    "areaLostPct": 4.16
+  },
+  {
+    "name": "brown",
+    "file": "assets/tops/brown.png",
+    "w": 1096,
+    "h": 1739,
+    "areaLostPct": 2.05
+  },
+  {
+    "name": "beige",
+    "file": "assets/tops/beige.png",
+    "w": 1096,
+    "h": 1739,
+    "areaLostPct": 5.93
+  },
+  {
+    "name": "black",
+    "file": "assets/tops/black.png",
+    "w": 1096,
+    "h": 1739,
+    "areaLostPct": 0.85
+  }
+]

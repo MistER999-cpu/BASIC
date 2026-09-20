@@ -1,0 +1,287 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>BASIC outfit builder</title>
+<style>
+  @font-face { font-family: Poppins; font-weight: 400;
+               src: url('../assets/fonts/Poppins-Regular.ttf') format('truetype'); }
+  @font-face { font-family: Poppins; font-weight: 500;
+               src: url('../assets/fonts/Poppins-Medium.ttf') format('truetype'); }
+  html, body { margin: 0; padding: 0; overflow: hidden; }
+  body { -webkit-font-smoothing: antialiased; }
+  #stage { position: relative; overflow: hidden; }
+  #stage img { position: absolute; display: block; }
+  .pill { position: absolute; background: #fff; display: flex; align-items: center;
+          box-sizing: border-box; }
+  .pill .q { font-family: Poppins, sans-serif; font-weight: 400; white-space: pre;
+             overflow: hidden; flex: 1 1 auto; display: flex; align-items: center; }
+  .caret { display: inline-block; width: 2px; flex: 0 0 auto; }
+  svg { position: absolute; overflow: visible; }
+</style>
+<body><div id="stage"></div></body>
+<script>
+"use strict";
+
+/* Deterministic per-character jitter. The typing has to land on the same
+   glyph at the same t on every run, so nothing here may touch Math.random:
+   render.mjs steps the page by setTime(t) and screenshots, and a re-render
+   has to match the last one frame for frame. */
+function hash(i, j) {
+  let x = (i * 374761393 + j * 668265263) | 0;
+  x = (x ^ (x >> 13)) * 1274126177 | 0;
+  return ((x ^ (x >> 16)) >>> 0) / 4294967296;
+}
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs) => {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+};
+
+let S = null;
+
+window.build = function build(cfg) {
+  const { width: W, height: H, fps } = cfg.output;
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  stage.style.width = W + 'px';
+  stage.style.height = H + 'px';
+  stage.style.background = cfg.page.bg;
+  document.body.style.background = cfg.page.bg;
+
+  /* ---- garments ------------------------------------------------------- */
+  const topEls = cfg.tops.map(t => {
+    const im = new Image();
+    im.src = t.src;
+    stage.appendChild(im);
+    return im;
+  });
+  const botEls = cfg.bottoms.map(b => {
+    const im = new Image();
+    im.src = b.src;
+    stage.appendChild(im);
+    return im;
+  });
+
+  /* The tank colourways share one canvas, so one box fits all four. */
+  const t0 = cfg.tops[0];
+  const topScale = cfg.slots.top.maxH / t0.h;
+  const tw = t0.w * topScale, th = t0.h * topScale;
+  topEls.forEach(im => {
+    im.style.width = tw + 'px';
+    im.style.height = th + 'px';
+    im.style.left = (W / 2 - tw / 2) + 'px';
+    im.style.top = (cfg.slots.top.cy - th / 2) + 'px';
+  });
+
+  /* Bottoms are eight different garments from eight different sources, so
+     their photographed scale means nothing. Each is scaled by its own
+     waistband instead - the one measurement that is roughly constant across
+     women's bottoms - which puts the jorts at true length beside a wide-leg
+     trouser. maxLen then clamps the one outlier: the cream trouser was shot
+     with a cinched belt and pooling hems, 5.12 lengths to a waist against
+     3.3-4.0 for everything else, and unclamped it runs off the frame. */
+  const bs = cfg.slots.bottom;
+  const botBox = cfg.bottoms.map(b => {
+    const s = Math.min(bs.waistPx / b.waist, bs.maxLen / b.h);
+    return { w: b.w * s, h: b.h * s };
+  });
+  botEls.forEach((im, i) => {
+    im.style.width = botBox[i].w + 'px';
+    im.style.height = botBox[i].h + 'px';
+    im.style.left = (W / 2 - botBox[i].w / 2) + 'px';
+    im.style.top = bs.waistY + 'px';
+  });
+
+  /* ---- arrows ---------------------------------------------------------- */
+  const A = cfg.slots.arrow;
+  const arrows = {};
+  for (const row of ['top', 'bot']) {
+    for (const side of ['L', 'R']) {
+      const cx = side === 'L' ? A.leftCx : A.rightCx;
+      const cy = row === 'top' ? A.topCy : A.botCy;
+      const s = svg('svg', {
+        width: A.w, height: A.h, viewBox: `0 0 ${A.w} ${A.h}`,
+        style: `left:${cx - A.w / 2}px;top:${cy - A.h / 2}px`,
+      });
+      const k = A.stroke / 2 + 1;
+      const pts = side === 'R'
+        ? `${k},${k} ${A.w - k},${A.h / 2} ${k},${A.h - k}`
+        : `${A.w - k},${k} ${k},${A.h / 2} ${A.w - k},${A.h - k}`;
+      s.appendChild(svg('polyline', {
+        points: pts, fill: 'none', stroke: cfg.page.blue,
+        'stroke-width': A.stroke, 'stroke-linejoin': 'miter',
+        'stroke-linecap': 'butt', 'stroke-miterlimit': 10,
+      }));
+      /* the reference scales the whole glyph about its own centre - it is not
+         an opacity change, the blue stays at full saturation while pressed */
+      s.style.transformOrigin = '50% 50%';
+      stage.appendChild(s);
+      arrows[row + side] = s;
+    }
+  }
+
+  /* ---- search pill ----------------------------------------------------- */
+  const P = cfg.search.pill;
+  const pill = document.createElement('div');
+  pill.className = 'pill';
+  pill.style.cssText += `left:${W / 2 - P.w / 2}px;top:${P.top}px;`
+                      + `width:${P.w}px;height:${P.h}px;border-radius:${P.radius}px;`
+                      + `padding:0 ${Math.round(P.h * 0.34)}px;gap:${Math.round(P.h * 0.22)}px;`;
+  const icon = Math.round(P.h * 0.46);
+
+  const mag = svg('svg', { width: icon, height: icon, viewBox: '0 0 24 24',
+                           style: 'position:relative;flex:0 0 auto' });
+  mag.appendChild(svg('circle', { cx: 10.5, cy: 10.5, r: 6.6, fill: 'none',
+                                  stroke: cfg.page.blue, 'stroke-width': 2.3 }));
+  mag.appendChild(svg('line', { x1: 15.4, y1: 15.4, x2: 21, y2: 21,
+                                stroke: cfg.page.blue, 'stroke-width': 2.3,
+                                'stroke-linecap': 'round' }));
+  pill.appendChild(mag);
+
+  const q = document.createElement('div');
+  q.className = 'q';
+  const qt = document.createElement('span');
+  const caret = document.createElement('span');
+  caret.className = 'caret';
+  q.appendChild(qt); q.appendChild(caret);
+  pill.appendChild(q);
+
+  const mic = svg('svg', { width: icon, height: icon, viewBox: '0 0 24 24',
+                           style: 'position:relative;flex:0 0 auto' });
+  mic.appendChild(svg('rect', { x: 9, y: 2, width: 6, height: 11, rx: 3,
+                                fill: cfg.page.blue }));
+  mic.appendChild(svg('path', { d: 'M5,11 A7,7 0 0 0 8.4,17', fill: 'none',
+                                stroke: '#EA4335', 'stroke-width': 2 }));
+  mic.appendChild(svg('path', { d: 'M8.4,17 A7,7 0 0 0 15.6,17', fill: 'none',
+                                stroke: '#FBBC05', 'stroke-width': 2 }));
+  mic.appendChild(svg('path', { d: 'M15.6,17 A7,7 0 0 0 19,11', fill: 'none',
+                                stroke: '#34A853', 'stroke-width': 2 }));
+  mic.appendChild(svg('rect', { x: 11, y: 18, width: 2, height: 4,
+                                fill: cfg.page.blue }));
+  pill.appendChild(mic);
+  stage.appendChild(pill);
+
+  /* One font size for the whole clip, fitted to the longest phrase. Resizing
+     mid-phrase to make a long one fit would be visible on every character. */
+  const avail = P.w - 2 * Math.round(P.h * 0.34) - 2 * icon
+              - 2 * Math.round(P.h * 0.22) - 6;
+  let fs = cfg.search.fontMax;
+  const longest = cfg.search.phrases
+    .reduce((a, b) => ([...a.text].length >= [...b.text].length ? a : b)).text;
+  for (; fs > 8; fs -= 0.25) {
+    qt.style.fontSize = fs + 'px';
+    qt.textContent = longest;
+    if (qt.offsetWidth <= avail) break;
+  }
+  qt.style.fontSize = fs + 'px';
+  qt.style.color = cfg.page.textColor;
+  caret.style.height = Math.round(fs * 1.12) + 'px';
+  caret.style.background = cfg.page.textColor;
+  caret.style.marginLeft = '2px';
+
+  /* ---- typing schedule -------------------------------------------------- */
+  const SC = cfg.search;
+  const plan = [];
+  let cursor = SC.startMs;
+  SC.phrases.forEach((p, i) => {
+    const chars = [...p.text];
+    const n = chars.length;
+    /* weights perturb the rhythm without changing the total, and a character
+       after a space gets extra: real typing pauses between words */
+    const w = chars.map((c, j) =>
+      1 + SC.jitter * (hash(i, j) - 0.5) * 2 + (j > 0 && chars[j - 1] === ' ' ? 0.9 : 0));
+    const sum = w.reduce((a, b) => a + b, 0);
+    const unit = (n * p.typeMs) / sum;
+    const at = [];
+    let acc = 0;
+    for (let j = 0; j < n; j++) { acc += w[j]; at.push(cursor + acc * unit); }
+    const typed = cursor + n * p.typeMs;
+    const last = i === SC.phrases.length - 1;
+    const holdEnd = last ? Infinity : typed + p.holdMs;
+    const delEnd = last ? Infinity : holdEnd + n * p.delMs;
+    plan.push({ chars, at, start: cursor, typed, holdEnd, delEnd, delMs: p.delMs });
+    cursor = last ? cursor : delEnd + SC.gapMs;
+  });
+
+  /* ---- state chain ------------------------------------------------------ */
+  /* Strictly one variable per cut, alternating, starting and ending on a top
+     change - the reference's whole mechanic. The unchanged half is what makes
+     a cut read as styling rather than as a slide advancing. */
+  const nb = cfg.bottoms.length;
+  const cuts = 2 * nb - 1;
+  const states = [{ top: 0, bot: 0 }];
+  for (let k = 1; k <= cuts; k++) {
+    const prev = states[k - 1];
+    states.push(k % 2
+      ? { top: (prev.top + 1) % cfg.tops.length, bot: prev.bot }
+      : { top: prev.top, bot: (prev.bot + 1) % nb });
+  }
+  const T = cfg.timeline;
+  const cutAt = [];
+  for (let k = 1; k <= cuts; k++) cutAt.push(T.openHold + (k - 1) * T.cadence);
+
+  S = { cfg, topEls, botEls, arrows, qt, caret, plan, states, cutAt,
+        pressDur: A.pressFrames / fps, fps };
+
+  return {
+    W, H, fontPx: fs, cuts, states: states.length,
+    duration: cutAt[cutAt.length - 1] + T.closeHold,
+    topBox: { w: Math.round(tw), h: Math.round(th) },
+    botBoxes: botBox.map((b, i) => ({
+      name: cfg.bottoms[i].name, w: Math.round(b.w), h: Math.round(b.h),
+      clamped: bs.waistPx / cfg.bottoms[i].waist > bs.maxLen / cfg.bottoms[i].h,
+    })),
+  };
+};
+
+window.setTime = function setTime(t) {
+  const { cfg, topEls, botEls, arrows, qt, caret, plan, states, cutAt, pressDur } = S;
+
+  /* ---- which outfit ----------------------------------------------------- */
+  let k = 0;
+  while (k < cutAt.length && t >= cutAt[k]) k++;
+  const st = states[k];
+  topEls.forEach((im, i) => { im.style.visibility = i === st.top ? 'visible' : 'hidden'; });
+  botEls.forEach((im, i) => { im.style.visibility = i === st.bot ? 'visible' : 'hidden'; });
+
+  /* ---- arrow press ------------------------------------------------------ */
+  /* Two states, no tween. Measured off the reference: 33x27px to 23x19px for
+     exactly 4 frames, colour unchanged, snapping back on the cut frame. */
+  const A = cfg.slots.arrow;
+  let pressed = null;
+  for (let i = 0; i < cutAt.length; i++) {
+    if (t >= cutAt[i] - pressDur && t < cutAt[i]) {
+      pressed = (i % 2 === 0) ? 'topR' : 'botR';
+      break;
+    }
+  }
+  for (const key in arrows) {
+    arrows[key].style.transform = key === pressed ? `scale(${A.pressScale})` : 'scale(1)';
+  }
+
+  /* ---- search bar ------------------------------------------------------- */
+  const ms = t * 1000;
+  let text = '', solid = false;
+  for (const p of plan) {
+    if (ms < p.start) break;
+    if (ms < p.typed) {
+      let n = 0;
+      while (n < p.at.length && ms >= p.at[n]) n++;
+      text = p.chars.slice(0, n).join(''); solid = true; break;
+    }
+    if (ms < p.holdEnd) { text = p.chars.join(''); solid = false; break; }
+    if (ms < p.delEnd) {
+      const gone = Math.floor((ms - p.holdEnd) / p.delMs);
+      text = p.chars.slice(0, Math.max(0, p.chars.length - gone)).join('');
+      solid = true; break;
+    }
+    text = ''; solid = false;
+  }
+  qt.textContent = text;
+  /* solid while keys are moving, blinking while the phrase sits - a caret
+     that blinks through its own typing reads as a dropped frame */
+  const on = solid || ((ms % cfg.search.caretBlinkMs) < cfg.search.caretBlinkMs / 2);
+  caret.style.opacity = on ? '1' : '0';
+};
+</script>
