@@ -45,3 +45,24 @@ Timeline:
   each 2s source window ping-ponged to a 94-frame cycle
 
 Scripts: 03_work/matte.py (keying), 03_work/build.py (composite)
+
+## v2 build
+
+04_output/one_tank_v2.mp4 — 1080x1920, 10s, 24fps, no text, 2.9 MB.
+
+Changes from v1:
+  - stand colour cycles 3x through brown/black/beige/cream, 0.83s per
+    colour, 0.18s dissolves; loops seamlessly
+  - both models present in every frame; each slot toggles on its own
+    switch list so the mix never aligns
+  - keying: achromatic-darkening test rejects cast shadows; 2px erode plus
+    normalised-convolution colour fill removes the edge halo
+  - exposure matched via clip-backdrop vs plate-backdrop ratio, applied as
+    a midtone gamma (1.03-1.32) instead of the earlier broken linear gain
+  - tight stand mask, and vignette/grade applied after compositing, which
+    removes the bright box that surrounded the stand base
+  - window selection vetoes high foot motion (m1_brown's shoe dissolves
+    around 0.5s in the source)
+  - 1.8% push-in, film grain, global vignette, mild contrast
+
+Scripts: 03_work/matte2.py, 03_work/build2.py
