@@ -1,7 +1,7 @@
 {
   "output": {
     "width": 1080,
-    "height": 1080,
+    "height": 1920,
     "fps": 30,
     "subframes": 1,
     "duration": 10.0,
@@ -14,12 +14,12 @@
   },
   "search": {
     "pill": {
-      "w": 480,
-      "h": 52,
-      "top": 62,
-      "radius": 26
+      "w": 853,
+      "h": 92,
+      "top": 110,
+      "radius": 46.2
     },
-    "fontMax": 26,
+    "fontMax": 46,
     "phrases": [
       {
         "text": "BASIC",
@@ -52,22 +52,22 @@
     "jitter": 0.42
   },
   "slots": {
-    "pxPerCm": 5.15,
+    "pxPerCm": 9.156,
     "top": {
-      "cy": 285,
+      "cy": 507,
       "cm": 58
     },
     "bottom": {
-      "waistY": 460
+      "waistY": 818
     },
     "arrow": {
-      "w": 38,
-      "h": 48,
-      "stroke": 7,
-      "leftCx": 379,
-      "rightCx": 701,
-      "topCy": 285,
-      "botCy": 555,
+      "w": 68,
+      "h": 85,
+      "stroke": 12.4,
+      "leftCx": 254,
+      "rightCx": 826,
+      "topCy": 507,
+      "botCy": 987,
       "pressScale": 0.7,
       "pressFrames": 4
     }
@@ -138,5 +138,6 @@
     "closeHold": 1.238
   },
   "_timing_note": "Measured off the reference clip: 0.50s before the first press, cuts every 0.583s (sigma 0.03), arrows scale to 0.70 for 4 frames and snap back on the cut frame itself, no easing anywhere. The reference closes on 0.67s; this one closes on 1.238s so 8 bottoms land on exactly 10.00s, and the longer beat carries the final phrase.",
-  "_scale_note": "pxPerCm ties both slots to one real-world scale: a 58cm tank against a 105cm trouser renders at 0.55 of its length, which is what it is. Per-garment cm is the flat garment length - outseam for trousers, hem to waistband for skirts. Eyeball these against the renders; they are the only numbers in here that come from the garment rather than from the photograph."
+  "_scale_note": "pxPerCm ties both slots to one real-world scale: a 58cm tank against a 105cm trouser renders at 0.55 of its length, which is what it is. Per-garment cm is the flat garment length - outseam for trousers, hem to waistband for skirts. Eyeball these against the renders; they are the only numbers in here that come from the garment rather than from the photograph.",
+  "_aspect_note": "9:16. Width is 1080 in both, so only the vertical layout scales, by 1920/1080. Every layout number is the square version times that factor, which keeps the composition's rhythm identical and lets the garments grow into the extra height. The arrows step outward because the garments widen inside the same 1080."
 }

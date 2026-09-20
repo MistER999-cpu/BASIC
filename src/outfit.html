@@ -182,7 +182,8 @@ window.build = function build(cfg) {
   qt.style.color = cfg.page.textColor;
   caret.style.height = Math.round(fs * 1.12) + 'px';
   caret.style.background = cfg.page.textColor;
-  caret.style.marginLeft = '2px';
+  caret.style.width = Math.max(2, Math.round(fs / 13)) + 'px';
+  caret.style.marginLeft = Math.max(2, Math.round(fs / 13)) + 'px';
 
   /* ---- typing schedule -------------------------------------------------- */
   const SC = cfg.search;

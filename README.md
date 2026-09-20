@@ -15,6 +15,7 @@ This repository holds two things:
 # Outfit builder
 
 Two slots, a fake Google search bar, and a blue chevron either side of each.
+1080x1920.
 Every cut changes exactly one slot, alternating top and bottom, so the
 unchanged half anchors the change and the cut reads as styling rather than as
 a slide advancing. Four tank colourways and eight bottoms make 15 cuts and 16
@@ -67,6 +68,18 @@ The per-garment `cm` values are the only numbers in the config that come from
 the garment rather than from the photograph. Eyeball them against a render.
 
 ## Matting the bottoms
+
+The backdrop is fitted from a corner seed, not from the whole border ring.
+`tools/cutout.py` fits the ring, which is right for a studio sweep where the
+garment sits well inside the frame; these sources are scraped and some are
+cropped hard to the garment. The daisy skirt fills its frame to within a few
+pixels, so only 62% of its border ring is backdrop at all — fitting through
+that gives a surface that tracks the skirt, every difference from it reads as
+small, and the matte keeps the whole rectangle: white corners, ragged edge and
+all. It looked fine at reel size in a square frame and fell apart the moment
+the garment was rendered at 9:16. The four corners are backdrop in every shot
+in this set, their medians agreeing to within 25, so they seed the fit and
+only ring pixels near that seed are fitted through.
 
 The closing kernel has to stay near 0.8% of the frame, not the 2.5% the tank
 matte uses. At 2.5% it bridges the gap between two trouser legs at the crotch,
@@ -132,6 +145,19 @@ final cut, so the clip lands rather than stopping.
 It is transients on silence, around -26 dBFS RMS, and it is meant to sit under
 a music bed rather than replace one. `tools/onsets.py` will place the cuts on
 a real track's transients if you add one.
+
+## Changing the aspect ratio
+
+Width is fixed at 1080, so only the vertical layout moves. Every layout number
+in `config.outfit.json` — pill, `pxPerCm`, slot positions, arrow sizes — is the
+square version multiplied by the height ratio, which keeps the composition's
+rhythm identical and lets the garments grow into the extra height. The arrows
+are the one exception: they step outward by hand, because the garments widen
+inside a width that did not change.
+
+Going the other way, or to any other shape, is the same operation: scale the
+layout block by the new height ratio and re-place the arrows outside the
+widest garment the render reports.
 
 ## The typing is deterministic
 

@@ -28,15 +28,56 @@ import numpy as np
 from scipy import ndimage
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cutout import probe, read_rgb, write_rgba, fit_backdrop, otsu
+from cutout import probe, read_rgb, write_rgba, otsu
 
 EXT = ('.jpg', '.jpeg', '.png', '.webp', '.avif', '.bmp', '.tif', '.tiff')
+
+
+def fit_backdrop_seeded(im, ring=48, tol=40):
+    """Quadratic backdrop fit, seeded from the corners rather than the whole border.
+
+    tools/cutout.py fits the backdrop to a border ring, which is right for a
+    studio sweep where the garment sits well inside the frame. These sources
+    are scraped and some are cropped hard to the garment: the daisy skirt
+    fills its frame to within a few pixels, so only 62% of its border ring is
+    backdrop at all. Fitting through that gives a surface that tracks the
+    skirt, every difference from it reads as small, and the matte keeps the
+    whole rectangle - white corners, ragged edge and all. It looked fine at
+    a thumbnail and fell apart the moment the garment was rendered larger.
+
+    The four corners are backdrop in every product shot in this set (their
+    medians agree to within 25 across all eight), so they seed the fit and
+    only ring pixels near that seed are fitted through.
+    """
+    h, w, _ = im.shape
+    ch, cw = max(4, h // 20), max(4, w // 20)
+    corners = [im[:ch, :cw], im[:ch, -cw:], im[-ch:, :cw], im[-ch:, -cw:]]
+    seed = np.median([np.median(c.reshape(-1, 3), axis=0) for c in corners], axis=0)
+
+    yy, xx = np.mgrid[0:h, 0:w]
+    xn, yn = xx / w - 0.5, yy / h - 0.5
+    edge = np.zeros((h, w), bool)
+    r = min(ring, h // 8, w // 8)
+    edge[:r] = edge[-r:] = True
+    edge[:, :r] = edge[:, -r:] = True
+    ok = edge & (np.linalg.norm(im - seed, axis=2) < tol)
+    if ok.sum() < 400:
+        ok = edge
+
+    basis = lambda X, Y: np.stack([np.ones_like(X), X, Y, X * X, X * Y, Y * Y], axis=-1)
+    A = basis(xn[ok], yn[ok])
+    full = basis(xn, yn).reshape(-1, 6)
+    out = np.empty_like(im)
+    for c in range(3):
+        coef, *_ = np.linalg.lstsq(A, im[..., c][ok], rcond=None)
+        out[..., c] = (full @ coef).reshape(h, w)
+    return out
 
 
 def matte_bottom(src, tol_lo=10.0, tol_hi=34.0, feather=1.2):
     w, h = probe(src)
     im = read_rgb(src, w, h)
-    bg = fit_backdrop(im)
+    bg = fit_backdrop_seeded(im)
     dist = np.linalg.norm(im - bg, axis=2)
     sigma = max(2.0, 0.004 * max(w, h))
     smooth = ndimage.gaussian_filter(dist, sigma)
