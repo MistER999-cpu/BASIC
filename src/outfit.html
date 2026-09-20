@@ -63,9 +63,14 @@ window.build = function build(cfg) {
     return im;
   });
 
-  /* The tank colourways share one canvas, so one box fits all four. */
+  /* Both slots are scaled by one number: how many pixels a centimetre of
+     real garment is worth. Scaling each slot to fill its own box instead
+     is what made the tank read wrong - a 58cm tank came out 350px against
+     460px for a 105cm trouser, three quarters the length of a garment it
+     is barely half the length of. */
+  const PPC = cfg.slots.pxPerCm;
   const t0 = cfg.tops[0];
-  const topScale = cfg.slots.top.maxH / t0.h;
+  const topScale = (cfg.slots.top.cm * PPC) / t0.h;
   const tw = t0.w * topScale, th = t0.h * topScale;
   topEls.forEach(im => {
     im.style.width = tw + 'px';
@@ -74,16 +79,15 @@ window.build = function build(cfg) {
     im.style.top = (cfg.slots.top.cy - th / 2) + 'px';
   });
 
-  /* Bottoms are eight different garments from eight different sources, so
-     their photographed scale means nothing. Each is scaled by its own
-     waistband instead - the one measurement that is roughly constant across
-     women's bottoms - which puts the jorts at true length beside a wide-leg
-     trouser. maxLen then clamps the one outlier: the cream trouser was shot
-     with a cinched belt and pooling hems, 5.12 lengths to a waist against
-     3.3-4.0 for everything else, and unclamped it runs off the frame. */
+  /* Eight garments from eight sources, so their photographed scale carries
+     nothing and each one's real length is declared in the config instead.
+     Measuring a photographed waistband and scaling by that was the earlier
+     attempt and it does not survive contact with a skirt: the daisy's
+     waistband is cut narrower than a trouser's, so it scaled up until a
+     78cm midi skirt rendered as long as a 105cm trouser. */
   const bs = cfg.slots.bottom;
   const botBox = cfg.bottoms.map(b => {
-    const s = Math.min(bs.waistPx / b.waist, bs.maxLen / b.h);
+    const s = (b.cm * PPC) / b.h;
     return { w: b.w * s, h: b.h * s };
   });
   botEls.forEach((im, i) => {
@@ -227,10 +231,20 @@ window.build = function build(cfg) {
   return {
     W, H, fontPx: fs, cuts, states: states.length,
     duration: cutAt[cutAt.length - 1] + T.closeHold,
+    /* the cue sheet the sound effects are built from, so a tick can never
+       drift from the cut it belongs to */
+    cues: {
+      cuts: cutAt.map((t, i) => ({ t, row: i % 2 === 0 ? 'top' : 'bottom' })),
+      pressLead: A.pressFrames / fps,
+      keys: plan.flatMap(p => p.at.map(ms => ms / 1000)),
+      deletes: plan.filter(p => isFinite(p.delEnd)).flatMap(p =>
+        p.chars.map((_, j) => (p.holdEnd + j * p.delMs) / 1000)),
+    },
     topBox: { w: Math.round(tw), h: Math.round(th) },
     botBoxes: botBox.map((b, i) => ({
-      name: cfg.bottoms[i].name, w: Math.round(b.w), h: Math.round(b.h),
-      clamped: bs.waistPx / cfg.bottoms[i].waist > bs.maxLen / cfg.bottoms[i].h,
+      name: cfg.bottoms[i].name, cm: cfg.bottoms[i].cm,
+      w: Math.round(b.w), h: Math.round(b.h),
+      overflow: Math.round(bs.waistY + b.h),
     })),
   };
 };

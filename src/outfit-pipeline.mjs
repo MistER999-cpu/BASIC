@@ -6,7 +6,7 @@
    between two sizes, so there is nothing for subframe accumulation to blur and
    no base footage to composite over - just frames, straight to H.264. */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { renderFrames } from './render.mjs';
 
 const args = process.argv.slice(2);
@@ -20,16 +20,15 @@ const FF = process.env.FFMPEG || 'ffmpeg';
 const ff = (...a) => execFileSync(FF, ['-hide_banner', '-loglevel', 'error', '-y', ...a],
                                   { stdio: ['ignore', 'inherit', 'inherit'] });
 
-/* The scene scales each bottom by its own waistband, so it needs the
-   measurements tools/bottoms.py took at matte time. Carrying them in
-   config.json instead would mean a re-matte silently disagreeing with a
-   hand-edited number. */
+/* The scene needs each cutout's pixel dimensions, which only the matte
+   knows. Real-world lengths come the other way, from config.json: no
+   measurement of a photograph can recover them. */
 const man = JSON.parse(readFileSync('assets/bottoms/manifest.json', 'utf8'));
 const byFile = new Map(man.map(m => [m.file, m]));
 cfg.bottoms = cfg.bottoms.map(b => {
   const m = byFile.get(b.src);
   if (!m) throw new Error(`${b.src} is not in assets/bottoms/manifest.json - re-run tools/bottoms.py`);
-  return { ...b, w: m.w, h: m.h, waist: m.waist };
+  return { ...b, w: m.w, h: m.h };
 });
 const tops = JSON.parse(readFileSync('assets/tops/manifest.json', 'utf8'));
 const byName = new Map(tops.map(m => [m.name, m]));
@@ -44,30 +43,43 @@ const T = cfg.timeline;
 const cuts = 2 * cfg.bottoms.length - 1;
 cfg.output.duration = +(T.openHold + (cuts - 1) * T.cadence + T.closeHold).toFixed(3);
 
-console.log(`[1/3] ${cfg.tops.length} tops x ${cfg.bottoms.length} bottoms`
+console.log(`[1/4] ${cfg.tops.length} tops x ${cfg.bottoms.length} bottoms`
           + ` -> ${cuts} cuts, ${cuts + 1} states, ${cfg.output.duration}s`);
 
 rmSync('out/sub', { recursive: true, force: true });
 mkdirSync('out', { recursive: true });
-console.log(`[2/3] rendering ${Math.round(cfg.output.duration * fps)} frames at ${W}x${H}`);
+console.log(`[2/4] rendering ${Math.round(cfg.output.duration * fps)} frames at ${W}x${H}`);
 const { geom } = await renderFrames({
   cfg, plateDir: 'out/__none__', outDir: 'out/sub', scene: 'src/outfit.html',
   onProgress: (n, t) => process.stdout.write(`\r      ${n}/${t} (${(100 * n / t).toFixed(0)}%)`),
 });
 process.stdout.write('\n');
 
+const floor = cfg.output.height;
 for (const b of geom.botBoxes) {
-  console.log(`      ${b.name.padEnd(24)} ${String(b.w).padStart(4)}x${String(b.h).padStart(3)}`
-            + (b.clamped ? '  (clamped to maxLen)' : ''));
+  console.log(`      ${b.name.padEnd(24)} ${String(b.cm).padStart(3)}cm ->`
+            + ` ${String(b.w).padStart(4)}x${String(b.h).padStart(3)}`
+            + (b.overflow > floor - 20 ? `  !! reaches y=${b.overflow} of ${floor}` : ''));
 }
 console.log(`      search text fitted at ${geom.fontPx}px`);
 
-console.log('[3/3] encoding');
+/* The cue sheet comes out of the scene, not out of a stopwatch against the
+   finished video: a UI sound a frame off its cut reads as latency. */
+console.log('[3/4] sound effects');
+writeFileSync('out/cues.json', JSON.stringify(
+  { duration: cfg.output.duration, ...geom.cues }, null, 2));
+execFileSync('python3', ['tools/sfx.py', 'out/cues.json', 'out/sfx.wav'],
+             { stdio: ['ignore', 'inherit', 'inherit'] });
+
+console.log('[4/4] encoding');
 ff('-framerate', String(fps), '-i', 'out/sub/s_%06d.jpg',
+   '-i', 'out/sfx.wav',
    '-vf', 'format=yuv420p',
+   '-map', '0:v:0', '-map', '1:a:0',
    '-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf),
    '-profile:v', 'high', '-level', '4.2', '-movflags', '+faststart',
-   '-an', '-r', String(fps), OUT);
+   '-c:a', 'aac', '-b:a', '192k', '-shortest',
+   '-r', String(fps), OUT);
 
 console.log(`      done -> ${OUT}`);
 if (!has('--keep')) rmSync('out/sub', { recursive: true, force: true });

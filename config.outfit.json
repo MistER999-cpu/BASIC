@@ -16,7 +16,7 @@
     "pill": {
       "w": 480,
       "h": 52,
-      "top": 70,
+      "top": 62,
       "radius": 26
     },
     "fontMax": 26,
@@ -52,23 +52,22 @@
     "jitter": 0.42
   },
   "slots": {
+    "pxPerCm": 5.15,
     "top": {
-      "cy": 325,
-      "maxH": 350
+      "cy": 285,
+      "cm": 58
     },
     "bottom": {
-      "waistY": 528,
-      "waistPx": 108,
-      "maxLen": 495
+      "waistY": 460
     },
     "arrow": {
       "w": 38,
       "h": 48,
       "stroke": 7,
-      "leftCx": 372,
-      "rightCx": 708,
-      "topCy": 325,
-      "botCy": 623,
+      "leftCx": 379,
+      "rightCx": 701,
+      "topCy": 285,
+      "botCy": 555,
       "pressScale": 0.7,
       "pressFrames": 4
     }
@@ -94,35 +93,43 @@
   "bottoms": [
     {
       "name": "cream pleated wide-leg",
-      "src": "assets/bottoms/an-elegent-class-bottow-wear.png"
+      "src": "assets/bottoms/an-elegent-class-bottow-wear.png",
+      "cm": 105
     },
     {
       "name": "denim jorts",
-      "src": "assets/bottoms/olivia-jorts-raw-blue-l.png"
+      "src": "assets/bottoms/olivia-jorts-raw-blue-l.png",
+      "cm": 33
     },
     {
       "name": "brown pinstripe",
-      "src": "assets/bottoms/téléchargé-20.png"
+      "src": "assets/bottoms/téléchargé-20.png",
+      "cm": 104
     },
     {
       "name": "daisy midi skirt",
-      "src": "assets/bottoms/daisy.png"
+      "src": "assets/bottoms/daisy.png",
+      "cm": 78
     },
     {
       "name": "light-wash wide leg",
-      "src": "assets/bottoms/wide-leg-jeans.png"
+      "src": "assets/bottoms/wide-leg-jeans.png",
+      "cm": 106
     },
     {
       "name": "alien flare denim",
-      "src": "assets/bottoms/alien-denim-cute-pants.png"
+      "src": "assets/bottoms/alien-denim-cute-pants.png",
+      "cm": 104
     },
     {
       "name": "black pleated wide-leg",
-      "src": "assets/bottoms/téléchargé-21.png"
+      "src": "assets/bottoms/téléchargé-21.png",
+      "cm": 106
     },
     {
       "name": "brown linen wide-leg",
-      "src": "assets/bottoms/women-s-wide-leg-pants-sewing-pattern-el.png"
+      "src": "assets/bottoms/women-s-wide-leg-pants-sewing-pattern-el.png",
+      "cm": 105
     }
   ],
   "timeline": {
@@ -130,5 +137,6 @@
     "cadence": 0.583,
     "closeHold": 1.238
   },
-  "_timing_note": "Measured off the reference clip: 0.50s before the first press, cuts every 0.583s (sigma 0.03), arrows scale to 0.70 for 4 frames and snap back on the cut frame itself, no easing anywhere. The reference closes on 0.67s; this one closes on 1.238s so 8 bottoms land on exactly 10.00s, and the longer beat carries the final phrase."
+  "_timing_note": "Measured off the reference clip: 0.50s before the first press, cuts every 0.583s (sigma 0.03), arrows scale to 0.70 for 4 frames and snap back on the cut frame itself, no easing anywhere. The reference closes on 0.67s; this one closes on 1.238s so 8 bottoms land on exactly 10.00s, and the longer beat carries the final phrase.",
+  "_scale_note": "pxPerCm ties both slots to one real-world scale: a 58cm tank against a 105cm trouser renders at 0.55 of its length, which is what it is. Per-garment cm is the flat garment length - outseam for trousers, hem to waistband for skirts. Eyeball these against the renders; they are the only numbers in here that come from the garment rather than from the photograph."
 }

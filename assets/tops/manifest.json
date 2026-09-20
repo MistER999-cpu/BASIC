@@ -1,30 +1,34 @@
 [
   {
     "name": "white",
+    "src": "image.png_2K_202609040944.jpeg_20260909205337 - Copie.jpeg",
     "file": "assets/tops/white.png",
-    "w": 1096,
-    "h": 1739,
-    "areaLostPct": 4.16
-  },
-  {
-    "name": "brown",
-    "file": "assets/tops/brown.png",
-    "w": 1096,
-    "h": 1739,
-    "areaLostPct": 2.05
+    "w": 1076,
+    "h": 1720,
+    "areaLostPct": 3.7
   },
   {
     "name": "beige",
+    "src": "image.png_2K_202609040944.jpeg_2K_202609040949.jpeg_20260909205342.jpeg",
     "file": "assets/tops/beige.png",
-    "w": 1096,
-    "h": 1739,
-    "areaLostPct": 5.93
+    "w": 1076,
+    "h": 1720,
+    "areaLostPct": 3.4
+  },
+  {
+    "name": "brown",
+    "src": "image.png_2K_202609040944.jpeg_2K_202609040949.jpeg_2K_20260909205345 - Copie.jpeg",
+    "file": "assets/tops/brown.png",
+    "w": 1076,
+    "h": 1720,
+    "areaLostPct": 3.76
   },
   {
     "name": "black",
+    "src": "image.png_2K_202609040944.jpeg_2K_202609040948.jpeg_20260909205347 - Copie.jpeg",
     "file": "assets/tops/black.png",
-    "w": 1096,
-    "h": 1739,
-    "areaLostPct": 0.85
+    "w": 1076,
+    "h": 1720,
+    "areaLostPct": 2.76
   }
 ]

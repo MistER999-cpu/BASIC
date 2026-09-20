@@ -43,48 +43,95 @@ Cuts sit 0.583s apart with a 0.60s opening hold. The reference closes on
 0.67s; this one closes on 1.238s, which is what puts eight bottoms on exactly
 10.00s and gives the last phrase a beat to sit on.
 
-## Bottoms are scaled by their waistband
+## Both slots are scaled by one real-world number
 
-The tank colourways share a canvas, so one box fits all four. The bottoms do
-not: eight garments from eight sources, at eight arbitrary photographic
-scales. Scaling each to fill the slot would stretch a pair of jorts to
-trouser length and destroy the one silhouette contrast in the set; scaling by
-the widest point would shrink a wide-leg trouser to match a pair of leggings.
+`pxPerCm` in `config.outfit.json` converts centimetres of real garment into
+pixels, and every item declares its flat length. A 58cm tank against a 105cm
+trouser renders at 0.55 of its length, which is what it is.
 
-`tools/bottoms.py` measures the waistband instead — roughly constant across
-women's bottoms — and `config.outfit.json` sets `waistPx`. Lengths then fall
-out at true relative scale: the jorts render 137px tall against 482px for the
-black pleated trouser. `maxLen` clamps anything that would still overrun the
-frame.
+Scaling each slot to fill its own box is the obvious thing and it is wrong:
+the tank came out 350px against 460px for the trouser, three quarters the
+length of a garment it is barely half the length of.
 
-Two things that band gets wrong if it is placed carelessly. Measured across
-the top 3-11% it runs through belts and pleat cinches — the cream trouser
-narrows to 96px at 8% of its height against 183px at its top edge, which made
-it read as half again as long per waist as anything else in the set. The top
-1-5% is above all of that. And the closing kernel has to stay near 0.8% of the
-frame, not the 2.5% the tank matte uses: at 2.5% it bridges the gap between
-two trouser legs at the crotch, `binary_fill_holes` floods the gap, and the
-garment ships with an opaque wedge of backdrop between its legs.
+Scaling the bottoms by their photographed waistband was the second attempt,
+and it is wrong in a subtler way. A waistband really is roughly constant
+across women's *trousers*, but it is not a garment-independent anchor: a
+skirt's waistband is cut narrower, so the daisy scaled up until a 78cm midi
+skirt rendered as long as a 105cm trouser, and the alien jeans were cropped
+so tight that their waistband nearly spanned the frame. `tools/bottoms.py`
+still measures and reports it, because the ratio is a useful smell test on a
+new cutout, but nothing scales by it. No measurement of a photograph recovers
+how long a garment is; that number has to be declared.
+
+The per-garment `cm` values are the only numbers in the config that come from
+the garment rather than from the photograph. Eyeball them against a render.
+
+## Matting the bottoms
+
+The closing kernel has to stay near 0.8% of the frame, not the 2.5% the tank
+matte uses. At 2.5% it bridges the gap between two trouser legs at the crotch,
+`binary_fill_holes` floods the gap, and the garment ships with an opaque wedge
+of backdrop between its legs.
 
 Carving flooded regions back out afterwards is the obvious fix and is wrong. A
 print containing backdrop-coloured pixels loses them — the daisy skirt mattes
 into lace, because its scalloped hem connects the white of the print to the
 white outside it.
 
-## The four tanks are pinned to one silhouette
+The waistband band is the top 1-5% and not the top 3-11%, because a belt or a
+pleated front cinches narrower than the waistband above it. The cream trouser
+narrows to 96px at 8% of its height against 183px at its top edge.
 
-The colourways were generated, not photographed four times, and they drift:
-pairwise silhouette IoU runs 0.94-0.99, hem widths spread 57px across a 1091px
-garment. The pairs cluster — brown/black at 0.988, white/beige at 0.977, but
-only 0.94 across that divide — which is two seeds, not one garment.
+## The tanks: shadow, then one silhouette
 
-That drift did not matter for the slot reveal, where the reels are in motion.
-Here the top slot changes colour and nothing else, so anything else that moves
-on the cut reads as a glitch. `tools/tops.py` intersects the four alphas.
-Using any single mask, or their union, would push past the garment on the
-others and composite backdrop into the edge; the intersection can only fall
-inside all four, at a cost of 5.9% of area on beige down to 0.9% on black, all
-of it in a thin band at the outer edge.
+`tools/cutout.py` drops the cast shadow as a separate blob, which works while
+the shadow is detached. Where it runs along the garment's own edge it is
+continuous with it and survives, and the pale colourways shipped with an 80px
+strip of backdrop grey down their right side at full opacity — 3.7% of the
+white tank, 3.5% of the beige. Reels in motion hid it; a slot that changes
+colour and nothing else does not.
+
+Shadow is the backdrop scaled down, so `tools/tops.py` separates it by
+projection rather than by distance. `s = <im,bg>/<bg,bg>` is how bright a
+pixel is relative to the backdrop and `im - s*bg` is how far its colour sits
+from the backdrop's, independent of brightness. Shadow has a small residual
+and `s` below 1. A neutral garment also has a small residual, which is why `s`
+is bounded below: the black tank projects to 0.19 and the brown to 0.29, far
+under any soft studio shadow, while the beige survives on residual alone (37
+against a tolerance of 10) because it is warm and the backdrop is cool.
+
+The four colourways were generated rather than photographed four times, and
+they drift — pairwise IoU 0.94-0.99, clustering at 0.988 (brown/black) and
+0.977 (white/beige) but only 0.94 across that divide, which is two seeds
+rather than one garment. The alphas are intersected, after each garment's own
+bounding box is centred on a common canvas: the shots are not even the same
+size, one being 2048x2068 against 2048x2048, and intersecting misaligned
+shots carves the silhouette down to wherever they happen to overlap.
+
+The intersection is then eroded clear of every colourway's despilled edge
+band. Taking RGB from one matte and alpha from another composites the unmixed
+edge colour at an opacity it was never solved for, which is a second way to
+put backdrop grey on a garment.
+
+## The sound is built from the render's cue sheet
+
+`src/outfit.html` returns the cut, keypress and backspace times it drew from,
+the pipeline writes them to `out/cues.json`, and `tools/sfx.py` synthesises
+against that. Timing the sounds by ear against the finished video would put
+them a frame or two off, and a UI sound a frame off its cut reads as latency.
+
+Four voices. A soft wooden tock on each garment cut, pitched lower for the
+bottom slot than the top so the rows are audible apart without anyone being
+told that is what they are hearing. A quieter, shorter click a press-length
+earlier, where the arrow shrinks — the same two-part shape a real button has,
+and otherwise that motion is silent. A dry tick on each typed character. A
+quieter one on each backspace, which at 26-34ms apart runs together into a
+burst rather than reading as separate keys. Then a two-note resolve under the
+final cut, so the clip lands rather than stopping.
+
+It is transients on silence, around -26 dBFS RMS, and it is meant to sit under
+a music bed rather than replace one. `tools/onsets.py` will place the cuts on
+a real track's transients if you add one.
 
 ## The typing is deterministic
 
