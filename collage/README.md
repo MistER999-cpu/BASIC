@@ -69,3 +69,30 @@ What the edit does, and why:
   edge (`REFRAME`) so her head sits above the card, as in the reference.
 - **Colour:** composited in ffmpeg on the bt709 path, so neither the film nor
   the cards shift colour. Audio is loudness-matched to -11 LUFS, -1 dBTP.
+
+## Director's cut
+
+`collage/export/directors_cut.mp4` (22.7 s) is the same edit finished as a
+BASIC ad; `collage/export/cover.jpg` is its last frame, for a Reels cover.
+
+```bash
+pip install pillow
+python3 collage/director.py            # -> out/collage/directors_cut.mp4
+python3 collage/director.py --stills   # key frames only, for checking
+```
+
+What it adds over `build.py`:
+
+- **Film finish on the background only:** soft midtone-weighted grain and a
+  light vignette. The cards stay clean: grainy film behind, crisp photo in
+  front, as in the reference.
+- **Card settle:** each photo lands 3.5% large and eases to rest over five
+  frames inside a card frame that never moves.
+- **Colour chip** under the card in the storefront's colourway names and
+  hex values (Bone, Sand, Clay, Ink), changing with every card.
+- **End card** on the empty studio plate (`base/plate.jpg`): the four
+  colourways land one per beat (beats 42-45), then the wordmark and product
+  name (46), then colourways, price and URL (47), holding to beat 50, the end
+  of the four-bar phrase. Names, price and URL come from `web/lib/products.ts`
+  and `web/lib/site.ts`; type is Inter and Instrument Serif, as on the site
+  (`fonts/`, SIL Open Font License).
