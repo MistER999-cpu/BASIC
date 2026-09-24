@@ -36,3 +36,36 @@ Name each card by its slot in the loop. Colour and pose both change on every swa
 
 `.png` or `.jpeg` are fine too. Cards do not need to be cropped to 4:5
 beforehand; they are centre-cropped to fit the card when the edit is rendered.
+
+## Render
+
+The finished cut is `collage/export/collage.mp4`. To rebuild it:
+
+```bash
+pip install opencv-python-headless imageio-ffmpeg
+python3 collage/build.py cards     # crop the 16 cards -> out/collage/cards/
+python3 collage/build.py plan      # print the cut list
+python3 collage/build.py render    # -> out/collage/collage.mp4
+```
+
+`build.py` maps each card to its source in `CARDS`: the eight new images in
+`collage/cards/`, and the eight studio shots cropped from the side-by-side
+photos in `collage/cards/studio/`. The Dutch-tilt cards are rotated 13-14° in
+the direction each pose already leans, since the generated images came out
+nearly level.
+
+What the edit does, and why:
+
+- **Card:** 760x950 (4:5), dead centre, 70% of the frame width, hard edges.
+  Same proportions as the reference.
+- **Cuts on the beat:** the track is 132 BPM (the three drops sit exactly 116
+  and 82 beats apart), so a card lasts one beat, 0.455 s, matching the
+  reference's ~0.46 s. The film opens on the drop at 36.63 s of the song.
+- **One two-beat hold** on the white full-body card, ending on the cut to the
+  brown clip, as the reference holds one card across a background cut.
+- **Swaps near a background cut snap onto it** (within 2 frames), so the two
+  layers never cut a few frames apart.
+- **Faces clear the card:** clips 1, 2 and 5 are scaled up about the bottom
+  edge (`REFRAME`) so her head sits above the card, as in the reference.
+- **Colour:** composited in ffmpeg on the bt709 path, so neither the film nor
+  the cards shift colour. Audio is loudness-matched to -11 LUFS, -1 dBTP.
