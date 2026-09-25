@@ -10,9 +10,9 @@ Each look replaces the previous one piece by piece across a 3×4 grid, in readin
 - **Order:** A-sand → B-brown → A-cream → B-black → A-brown → B-sand → A-black → B-cream
   (models alternate; each half shows all four colours; every transition is between contrasting backdrops).
 - **Paper:** each photo is a matte print on its own sheet (paper tooth lit from the side, softened blacks,
-  each cut piece catching the light slightly differently), laid on a paper board. Seams are real cuts:
-  small gaps with bright cut edges, stray fibres and soft shadows. Seam positions and strengths come from
-  `grid_geometry.json`, measured from the reference video; faded seams stay butted.
+  each cut piece catching the light slightly differently), laid on a paper board. Every seam is a full cut
+  from edge to edge: a small gap with bright cut edges, stray fibres and soft shadows. Seam positions (with
+  their small jogs) come from `grid_geometry.json`, measured from the reference video.
 - **Timing:** locked to the 93.2 BPM beat. Each transition flips 12 pieces over 2 beats, with the last
   piece landing on the beat, then the look holds for about a beat.
 - **Audio:** `reference_audio.wav` (from the reference video), with its two-bar phrase looped on matching
