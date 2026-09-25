@@ -5,10 +5,10 @@ Each photo is treated as a matte print on its own sheet of paper, cut into a
 3x4 grid of pieces laid on a paper board. A new look replaces the previous one
 piece by piece in reading order (left to right, top to bottom).
 
-Grid:   seam positions and strengths come from grid_geometry.json, measured
-        from the reference video (jogs and faded seams included). Strong seams
-        become small gaps between pieces showing the board, with a bright cut
-        edge, stray fibres and a soft shadow; faded seams stay butted.
+Grid:   seam positions come from grid_geometry.json, measured from the
+        reference video (with its small jogs where pieces meet). Every seam is
+        a full cut from edge to edge: a small gap showing the board, with a
+        bright cut edge, stray fibres and a soft shadow.
 Timing: locked to the soundtrack's 93.2 BPM beat grid. Each transition flips
         12 pieces over 2 beats with the last piece landing on the beat, then
         the finished look holds for about a beat.
@@ -67,7 +67,7 @@ LOOP_B = 5.789 - CROSSFADE / 2
 # Paper and print look
 BOARD_RGB = (231, 226, 220)      # the paper board seen through the cuts
 CUT_RGB = (244, 240, 234)        # bright core of a freshly cut paper edge
-GAP_FULL = 4.4                   # gap width (px) for a full-strength seam
+GAP_FULL = 4.4                   # gap width (px) of every cut
 PRINT_TEXTURE = 0.042            # paper tooth showing through the print
 BOARD_TEXTURE = 0.055
 SHADOW = 0.45                    # piece shadow on the board, light from top-left
@@ -141,27 +141,23 @@ def build_geometry(geom):
         col += X > np.choose(row, [vx[(0, c)], vx[(1, c)], vx[(2, c)], vx[(3, c)]])
     tile = row * 3 + col
 
-    # gap width along every seam, from its measured strength
+    # every seam is a full cut from edge to edge: the measured positions (with
+    # their small jogs) at one gap width, varying only slightly like a hand cut
     gap = np.zeros((H, W), np.float32)
     for s in geom["vertical"]:
-        prof = np.asarray(s["opacity"], np.float32)
         yo = np.arange(math.floor(s["y0"] * sy), min(math.ceil(s["y1"] * sy), H))
-        op = np.interp((yo + 0.5) / sy - 0.5 - s["y0"], np.arange(len(prof)), prof)
-        xc = int(round((s["x"] + 0.5) * sx - 0.5))
-        gap[yo, xc] = np.maximum(gap[yo, xc], op * GAP_FULL)
+        gap[yo, int(round((s["x"] + 0.5) * sx - 0.5))] = GAP_FULL
     for s in geom["horizontal"]:
-        prof = np.asarray(s["opacity"], np.float32)
         xo = np.arange(math.floor(s["x0"] * sx), min(math.ceil(s["x1"] * sx), W))
-        op = np.interp((xo + 0.5) / sx - 0.5 - s["x0"], np.arange(len(prof)), prof)
-        yc = int(round((s["y"] + 0.5) * sy - 0.5))
-        gap[yc, xo] = np.maximum(gap[yc, xo], op * GAP_FULL)
+        gap[int(round((s["y"] + 0.5) * sy - 0.5)), xo] = GAP_FULL
     gap = cv2.dilate(gap, np.ones((11, 11), np.uint8))
     gap = cv2.GaussianBlur(gap, (0, 0), 2.0)
-    gap[gap < 1.3] = 0                                   # faint seams: pieces butt together
+    gap *= 1 + 0.06 * np.clip(smooth_noise(np.random.default_rng(5), 150), -1.5, 1.5)
+    gap[gap < 1.3] = 0
 
     # hand-cut edges: a slow wobble plus slight fraying, only where there is a gap
     rng = np.random.default_rng(7)
-    wobble = np.clip(0.35 * smooth_noise(rng, 70) + 0.15 * smooth_noise(rng, 4), -0.6, 0.6)
+    wobble = np.clip(0.28 * smooth_noise(rng, 70) + 0.10 * smooth_noise(rng, 4), -0.4, 0.4)
     wobble *= np.clip((gap - 1.3) / 1.2, 0, 1)
 
     alphas = []
