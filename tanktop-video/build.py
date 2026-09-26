@@ -29,28 +29,23 @@ FRAMES = 300  # 10 s
 CUTS = 68  # 34 per page = 17 look changes each, so the video loops seamlessly
 PAGE_W, PAGE_H = 960, 1080  # two pages side by side = 1920x1080 (16:9)
 SEAM = 0.575  # waist position on the page (fraction of height)
+HEAD_MARGIN = 32  # px between the top of the tallest head and the page top
 TARGET_BG = np.array([154, 140, 128], float)  # #9A8C80
 LOOKS = ["ivory", "chocolate", "sand", "black"]
 
-# file, waistband y (source px), body center x (source px)
+# file, waistband y (source px), eye midpoint (x, y) in source px
 MODELS = {
     "A": {
-        "height": 2620,  # source px covered by one page
-        "looks": {
-            "ivory": ("Woman_wearing_fashion_lookbook_o…_2K_20260926113040.jpg", 1556, 764),
-            "chocolate": ("Keep_absolutely_everything_identical__the_2K_20260926113047.jpg", 1428, 773),
-            "sand": ("Woman_posing_for_fashion_lookbook_2K_20260926113050.jpg", 1436, 769),
-            "black": ("Woman_wearing_black_tank_top_2K_20260926113212.jpg", 1438, 772),
-        },
+        "ivory": ("Woman_wearing_fashion_lookbook_o…_2K_20260926113040.jpg", 1556, (762.5, 364.5)),
+        "chocolate": ("Keep_absolutely_everything_identical__the_2K_20260926113047.jpg", 1428, (765.0, 368.5)),
+        "sand": ("Woman_posing_for_fashion_lookbook_2K_20260926113050.jpg", 1436, (766.5, 366.0)),
+        "black": ("Woman_wearing_black_tank_top_2K_20260926113212.jpg", 1438, (760.0, 365.0)),
     },
     "B": {
-        "height": 2690,
-        "looks": {
-            "ivory": ("Woman_wearing_hijab_and_tank_2K_20260926114415.jpg", 1562, 769),
-            "chocolate": ("Woman_wearing_hijab_and_tank_2K_20260926114417.jpg", 1500, 770),
-            "sand": ("Woman_wearing_hijab_and_cardigan_2K_20260926114420.jpg", 1588, 770),
-            "black": ("Woman_wearing_fashion_lookbook_o…_2K_20260926114423.jpg", 1578, 760),
-        },
+        "ivory": ("Woman_wearing_hijab_and_tank_2K_20260926114415.jpg", 1562, (758.5, 400.5)),
+        "chocolate": ("Woman_wearing_hijab_and_tank_2K_20260926114417.jpg", 1500, (760.5, 389.0)),
+        "sand": ("Woman_wearing_hijab_and_cardigan_2K_20260926114420.jpg", 1588, (761.0, 401.5)),
+        "black": ("Woman_wearing_fashion_lookbook_o…_2K_20260926114423.jpg", 1578, (760.0, 398.5)),
     },
 }
 
@@ -79,31 +74,62 @@ def flatten_background(a):
     return np.clip(a * (TARGET_BG / field), 0, 255)
 
 
-def make_page(model, look):
-    fname, waist, cx = MODELS[model]["looks"][look]
-    src_h = MODELS[model]["height"]
-    src_w = src_h * PAGE_W / PAGE_H
-    a = flatten_background(np.asarray(Image.open(os.path.join(IMG, fname)).convert("RGB")).astype(float))
+def crop_page(a, top, center_x, src_h):
+    """Cut one page out of a flattened photo; where the page is wider than
+    the photo, extend it with the backdrop colour (edges feathered)."""
     h, w, _ = a.shape
-    top = waist - SEAM * src_h
-    left = cx - src_w / 2
-    assert top + src_h <= h + 1, f"{model}/{look}: page runs past the bottom of the photo"
-
-    # The page is wider than the photo: extend it with the backdrop colour,
-    # feathering the photo's edges so the join can't be seen.
+    src_w = src_h * PAGE_W / PAGE_H
+    assert top + src_h <= h + 1, "page runs past the bottom of the photo"
     feather = 90
     ramp_x = np.clip(np.minimum(np.arange(w), w - 1 - np.arange(w)) / feather, 0, 1)
     ramp_y = np.clip(np.arange(h) / feather, 0, 1)  # top only: the page ends inside the photo
     alpha = (ramp_y[:, None] * ramp_x[None, :])[..., None]
     a = a * alpha + TARGET_BG * (1 - alpha)
-
     pad = 800
     canvas = np.empty((h + 2 * pad, w + 2 * pad, 3))
     canvas[:] = TARGET_BG
     canvas[pad:pad + h, pad:pad + w] = a
+    left = center_x - src_w / 2
     box = (left + pad, top + pad, left + pad + src_w, top + pad + src_h)
     img = Image.fromarray(canvas.round().astype(np.uint8)).resize((PAGE_W, PAGE_H), Image.LANCZOS, box=box)
     return np.asarray(img).astype(float)
+
+
+def model_pages(model):
+    """Pages for every look of one model, positioned separately for use as
+    a top half and as a bottom half:
+      - top halves are pinned by the eyes, so the head never moves;
+      - bottom halves are pinned by the waistband, so the cut always lands
+        on it and the legs never move.
+    The eye-to-cut distance is the shortest torso among the looks, so no
+    top half ever shows its trousers above the cut."""
+    looks = MODELS[model]
+    imgs, heads, fgs = {}, {}, {}
+    for look, (fname, waist, (ex, ey)) in looks.items():
+        a = flatten_background(np.asarray(Image.open(os.path.join(IMG, fname)).convert("RGB")).astype(float))
+        fg = np.sqrt(((a - TARGET_BG) ** 2).sum(2)) > 30
+        imgs[look], fgs[look] = a, fg
+        heads[look] = ey - np.where(fg[:, 300:-300].mean(1) > 0.02)[0][0]  # head/hair top above the eyes
+
+    seam_row = SEAM * PAGE_H
+    torso = min(waist - ey for _, waist, (ex, ey) in looks.values())
+    scale = (seam_row - HEAD_MARGIN) / (torso + max(heads.values()))  # page px per source px
+    src_h = PAGE_H / scale
+
+    def arms_mid(look, y):  # centre between the outer edges of the arms at row y
+        cols = np.where(fgs[look][int(y) - 6:int(y) + 6].mean(0) > 0.5)[0]
+        return (cols[0] + cols[-1]) / 2
+
+    # body offset from the eyes, averaged, so arms line up across the cut
+    arm_off = {look: arms_mid(look, ey + torso - 8) - ex for look, (_, _, (ex, ey)) in looks.items()}
+    mean_off = sum(arm_off.values()) / len(arm_off)
+
+    pages = {}
+    for look, (_, waist, (ex, ey)) in looks.items():
+        pages[(look, "top")] = crop_page(imgs[look], ey + torso - seam_row / scale, ex + mean_off / 2, src_h)
+        pages[(look, "bot")] = crop_page(
+            imgs[look], waist - seam_row / scale, arms_mid(look, waist + 8) - mean_off / 2, src_h)
+    return pages
 
 
 def book_shading():
@@ -203,11 +229,10 @@ def schedule(seed):
 def main():
     seed = int(sys.argv[1]) if len(sys.argv) > 1 else 7
     os.makedirs(OUT, exist_ok=True)
-    pages = {
-        (p, look): make_page(m, look)
-        for p, m in (("L", "B"), ("R", "A"))
-        for look in LOOKS
-    }
+    pages = {}
+    for p, m in (("L", "B"), ("R", "A")):
+        for (look, half), page in model_pages(m).items():
+            pages[(p, look, half)] = page
     shade = book_shading()
     seam_row = round(SEAM * PAGE_H)
     grain = np.random.default_rng(1).normal(0, 1.6, (PAGE_H, 2 * PAGE_W, 1))
@@ -216,8 +241,8 @@ def main():
         frame = np.empty((PAGE_H, 2 * PAGE_W, 3))
         for i, p in enumerate(("L", "R")):
             x0 = i * PAGE_W
-            frame[:seam_row, x0:x0 + PAGE_W] = pages[(p, state[p]["top"])][:seam_row]
-            frame[seam_row:, x0:x0 + PAGE_W] = pages[(p, state[p]["bot"])][seam_row:]
+            frame[:seam_row, x0:x0 + PAGE_W] = pages[(p, state[p]["top"], "top")][:seam_row]
+            frame[seam_row:, x0:x0 + PAGE_W] = pages[(p, state[p]["bot"], "bot")][seam_row:]
         return np.clip(frame * shade + grain, 0, 255).astype(np.uint8)
 
     state, cuts = schedule(seed)
