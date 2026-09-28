@@ -1,0 +1,3 @@
+build/*
+!build/cutouts/
+__pycache__/
