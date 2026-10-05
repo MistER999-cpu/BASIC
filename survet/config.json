@@ -1,24 +1,11 @@
 {
-  "output": { "width": 1080, "height": 1920, "fps": 30, "duration": 10.9, "crf": 16 },
-
-  "audio": {
-    "file": "assets/audio/around-the-world.mp3",
-    "start": 188.966,
-    "fadeIn": 0.03,
-    "fadeOut": 0.8
-  },
+  "output": { "width": 1080, "height": 1920, "fps": 30, "duration": 11.4, "crf": 16 },
+  "audio": { "file": "assets/audio/around-the-world.mp3", "start": 188.966, "fadeIn": 0.03, "fadeOut": 0.8 },
   "music": { "bpm": 121.286, "offset": 0 },
-
   "word": "survêt",
   "seed": 11,
-
   "gap": "#F1F0F2",
-  "colours": {
-    "sand":  "#B39A6E",
-    "black": "#2E2A2B",
-    "brown": "#5E3527"
-  },
-
+  "colours": { "sand": "#B39A6E", "black": "#2E2A2B", "brown": "#5E3527" },
   "text": {
     "mode": "contrast",
     "contrast": { "sand": "black", "black": "sand", "brown": "sand" },
@@ -26,27 +13,37 @@
     "width": 0.8,
     "maxHeight": 0.15,
     "appearBeat": 4,
-    "fontEvery": 0.5,
-    "colourLag": 0.15
+    "fontEvery": 0.5
   },
-
   "strips": { "count": 4, "gap": 6 },
-
   "cut": { "slide": 0.2, "shutter": 0.017, "drift": 30, "breathe": 0.04 },
-
   "sections": [
-    { "colour": "intro", "colours": ["sand", "black", "brown", "sand"],
-      "start": 0,  "end": 4,  "first": -2, "phase": 1, "every": 4, "stagger": 0.5 },
-    { "colour": "sand",  "start": 4,  "end": 8,  "first": 0, "phase": 1, "every": 1, "stagger": 0.25 },
-    { "colour": "black", "start": 8,  "end": 12, "every": 1, "stagger": 0.25 },
+    {
+      "colour": "intro",
+      "start": 0,
+      "end": 4,
+      "picks": [
+        { "strip": 0, "beat": -2, "shot": "sand-high-angle.jpg" },
+        { "strip": 1, "beat": -2, "shot": "black-end.jpg" },
+        { "strip": 2, "beat": -2, "shot": "brown-end.jpg" },
+        { "strip": 3, "beat": -2, "shot": "sand-walk.jpg" },
+        { "strip": 0, "beat": 1, "shot": "black-worms-eye.jpg" },
+        { "strip": 1, "beat": 2, "shot": "brown-hands-hair.jpg" },
+        { "strip": 2, "beat": 2.5, "shot": "sand-spin.jpg" },
+        { "strip": 3, "beat": 3, "shot": "black-floor-sit.jpg" },
+        { "strip": 0, "beat": 3.25, "shot": "sand-power-stance.jpg" },
+        { "strip": 1, "beat": 3.5, "shot": "brown-back-walk.jpg" }
+      ]
+    },
+    { "colour": "sand", "start": 4, "end": 8, "first": 0, "phase": 1, "every": 1, "stagger": 0.25 },
+    { "colour": "black", "start": 8, "end": 12, "every": 1, "stagger": 0.25 },
     { "colour": "brown", "start": 12, "end": 16, "every": 1, "stagger": 0.25 },
-    { "colour": "mix",   "start": 16, "end": 18, "every": 0.5, "stagger": 0.125 }
+    { "colour": "mix", "start": 16, "end": 18, "every": 0.5, "stagger": 0.125 }
   ],
-
-  "punch": { "beats": [4, 8, 12, 16, 18], "amount": 0.03, "decay": 0.22 },
-  "flash": { "beats": [4], "amount": 0.32, "decay": 0.1 },
+  "punch": { "beats": [4, 8, 12, 16, 18], "amount": 0.05, "decay": 0.4 },
+  "flash": { "beats": [4], "amount": 0.45, "decay": 0.3 },
   "grain": 0.05,
-
+  "opener": { "width": 700 },
   "end": {
     "beat": 18,
     "stagger": 0.25,
@@ -54,39 +51,51 @@
     "logo": "survet/brand/logo-trim.png",
     "logoWidth": 560,
     "logoTop": 300,
-    "logoBeat": 18.75,
+    "logoBeat": 18.5,
     "font": "Syne[wght].ttf",
-    "tagline": 40,
-    "subjectBottom": 1865
+    "tagline": 46,
+    "taglineInk": "#151413",
+    "subjectBottom": 1865,
+    "swatch": 20,
+    "swatchGap": 72
   },
-
   "framings": [
-    { "name": "full",  "z": 1.0 },
+    { "name": "full", "z": 1.0 },
     { "name": "upper", "z": 1.45, "at": 0.28 },
-    { "name": "lower", "z": 1.4,  "at": 0.74 },
-    { "name": "head",  "z": 1.85, "at": 0.1 },
-    { "name": "feet",  "z": 1.75, "at": 0.94 },
-    { "name": "left",  "z": 1.15, "dx": -0.07 },
+    { "name": "lower", "z": 1.4, "at": 0.74 },
+    { "name": "head", "z": 1.85, "at": 0.1 },
+    { "name": "feet", "z": 1.75, "at": 0.94 },
+    { "name": "left", "z": 1.15, "dx": -0.07 },
     { "name": "right", "z": 1.15, "dx": 0.07 }
   ],
-
+  "avoid": {
+    "black-floor-sit.jpg": ["feet"],
+    "black-worms-eye.jpg": ["feet"],
+    "black-walk-back.jpg": ["feet"],
+    "black-end.jpg": ["feet"],
+    "brown-end.jpg": ["feet"],
+    "brown-back-walk.jpg": ["feet"],
+    "black-crouch.jpg": ["upper", "head", "left", "feet"],
+    "brown-neckline.jpg": ["left", "right"]
+  },
+  "grade": { "black-crouch.jpg": "neutral", "black-walk-back.jpg": "neutral" },
   "fonts": [
     { "file": "Anton-Regular.ttf" },
-    { "file": "AbrilFatface-Regular.ttf" },
-    { "file": "RubikMonoOne-Regular.ttf" },
-    { "file": "Pacifico-Regular.ttf" },
-    { "file": "DMSerifDisplay-Italic.ttf" },
-    { "file": "Bungee-Regular.ttf" },
-    { "file": "InstrumentSerif-Italic.ttf" },
-    { "file": "FasterOne-Regular.ttf" },
-    { "file": "Unbounded[wght].ttf", "weight": 900 },
-    { "file": "Shrikhand-Regular.ttf" },
-    { "file": "SpaceMono-Bold.ttf" },
-    { "file": "YesevaOne-Regular.ttf" },
-    { "file": "PermanentMarker-Regular.ttf" },
-    { "file": "Syne[wght].ttf", "weight": 800 },
+    { "file": "PlayfairDisplay-Italic[wght].ttf", "weight": 900 },
     { "file": "ArchivoBlack-Regular.ttf" },
-    { "file": "BebasNeue-Regular.ttf" }
+    { "file": "BodoniModa-Italic[opsz,wght].ttf", "weight": 800 },
+    { "file": "Syne[wght].ttf", "weight": 800 },
+    { "file": "AbrilFatface-Regular.ttf" },
+    { "file": "BebasNeue-Regular.ttf" },
+    { "file": "Gloock-Regular.ttf" },
+    { "file": "Unbounded[wght].ttf", "weight": 900 },
+    { "file": "DMSerifDisplay-Italic.ttf" },
+    { "file": "Fraunces-Italic[SOFT,WONK,opsz,wght].ttf", "weight": 900 },
+    { "file": "SpaceMono-Bold.ttf" },
+    { "file": "BodoniModa[opsz,wght].ttf", "weight": 700 },
+    { "file": "YesevaOne-Regular.ttf" },
+    { "file": "CormorantGaramond-Italic[wght].ttf", "weight": 700 },
+    { "file": "InstrumentSerif-Italic.ttf" }
   ],
   "dropFont": "Anton-Regular.ttf"
 }

@@ -102,11 +102,16 @@ const ffArgs = [
   '-framerate', String(fps), '-i', join(frameDir, 'f_%05d.png'),
   ...(audio ? ['-ss', String(A.start), '-t', String(duration), '-i', resolve(ROOT, A.file)] : []),
   '-map', '0:v:0',
+  // a limiter keeps the drop from clipping once Instagram re-encodes it
   ...(audio ? ['-map', '1:a:0', '-c:a', 'aac', '-b:a', '256k', '-ar', '48000',
-               '-af', `afade=t=in:st=0:d=${A.fadeIn},afade=t=out:st=${(duration - A.fadeOut).toFixed(3)}:d=${A.fadeOut}`]
+               '-af', `afade=t=in:st=0:d=${A.fadeIn},afade=t=out:st=${(duration - A.fadeOut).toFixed(3)}:d=${A.fadeOut},`
+                    + 'alimiter=limit=0.89:level=false']
             : ['-an']),
+  // RGB frames -> BT.709 video, tagged as such so players don't guess
+  '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf),
-  '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.2',
+  '-profile:v', 'high', '-level', '4.2',
   '-r', String(fps), '-movflags', '+faststart',
   '-t', String(duration), OUT,
 ];
