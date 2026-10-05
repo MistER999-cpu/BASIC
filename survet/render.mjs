@@ -32,7 +32,12 @@ for (const colour of Object.keys(cfg.colours)) {
     ? readdirSync(dir).filter(f => /\.(jpe?g|png|webp)$/i.test(f)).sort()
     : [];
   if (!files.length) throw new Error(`no shots in ${dir}`);
-  cfg.shots[colour] = files.map(f => ({ name: f, url: pathToFileURL(join(dir, f)).href }));
+  // a retouched copy (survet/retouch/<name>, see destripe.py) stands in for
+  // the original when there is one
+  cfg.shots[colour] = files.map(f => {
+    const touched = join(HERE, 'retouch', f);
+    return { name: f, url: pathToFileURL(existsSync(touched) ? touched : join(dir, f)).href };
+  });
   console.log(`  ${colour.padEnd(6)} ${files.length} shots`);
 }
 cfg.fonts = cfg.fonts.map(f => ({ ...f, url: pathToFileURL(join(HERE, 'fonts', f.file)).href }));
@@ -102,10 +107,10 @@ const ffArgs = [
   '-framerate', String(fps), '-i', join(frameDir, 'f_%05d.png'),
   ...(audio ? ['-ss', String(A.start), '-t', String(duration), '-i', resolve(ROOT, A.file)] : []),
   '-map', '0:v:0',
-  // a limiter keeps the drop from clipping once Instagram re-encodes it
+  // a limiter keeps the drop under -1 dBTP once Instagram re-encodes it
   ...(audio ? ['-map', '1:a:0', '-c:a', 'aac', '-b:a', '256k', '-ar', '48000',
                '-af', `afade=t=in:st=0:d=${A.fadeIn},afade=t=out:st=${(duration - A.fadeOut).toFixed(3)}:d=${A.fadeOut},`
-                    + 'alimiter=limit=0.89:level=false']
+                    + 'alimiter=limit=0.79:attack=1:level=false']
             : ['-an']),
   // RGB frames -> BT.709 video, tagged as such so players don't guess
   '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',

@@ -18,8 +18,9 @@
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let CFG, W, H, P, SHOTS = {}, FONTS = [], END_FONT, LOGO, GRAIN = [], END_BG, TL;
-let SCRATCH, FRAME;
+let CFG, W, H, P, SHOTS = {}, FONTS = [], END_FONT, LOGO, GRAIN = [], END_BG, END_FLOOR, TL;
+let SCRATCH, FRAME, TALL = [], END_TMP;
+const smooth = c => { const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; return c; };
 
 /* ---- helpers ------------------------------------------------------------ */
 function rng(seed) {
@@ -70,7 +71,7 @@ function analyse(im) {
   g.drawImage(im, 0, 0, w, h);
   const px = g.getImageData(0, 0, w, h).data;
   const cols = new Float64Array(w), rows = new Float64Array(h), mask = new Uint8Array(w * h);
-  let mass = 0, sx = 0, bg = [0, 0, 0], nbg = 0;
+  let mass = 0, sx = 0, bg = [0, 0, 0], nbg = 0, fl = [0, 0, 0], nfl = 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = 4 * (y * w + x), r = px[i], gg = px[i + 1], b = px[i + 2];
     const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
@@ -79,6 +80,7 @@ function analyse(im) {
     const subject = (sat > 0.16 && lum < 240) || lum < 105;
     if (subject) { cols[x]++; rows[y]++; mass++; sx += x + 0.5; mask[y * w + x] = 1; }
     else if (y < h * 0.15) { bg[0] += r; bg[1] += gg; bg[2] += b; nbg++; }
+    else if (y > h * 0.85) { fl[0] += r; fl[1] += gg; fl[2] += b; nfl++; }
   }
   const quant = (arr, q) => {
     let acc = 0;
@@ -109,6 +111,7 @@ function analyse(im) {
     y0: y0 / h, y1: (y1 + 1) / h,
     fill: mass / (w * h),
     bg: nbg ? bg.map(v => v / nbg) : [190, 190, 192],
+    floor: nfl ? fl.map(v => v / nfl) : [210, 210, 212],
   };
   a.closeup = (a.x1 - a.x0) > 0.7 || a.fill > 0.42;
   return a;
@@ -151,8 +154,13 @@ async function load(cfg) {
   W = canvas.width = cfg.output.width;
   H = canvas.height = cfg.output.height;
   P = 60 / cfg.music.bpm;
-  SCRATCH = document.createElement('canvas'); SCRATCH.width = W; SCRATCH.height = H;
-  FRAME = document.createElement('canvas'); FRAME.width = W; FRAME.height = H;
+  const canvasOf = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return smooth(c); };
+  SCRATCH = canvasOf(W, H);
+  FRAME = canvasOf(W, H);
+  END_TMP = canvasOf(W, H);
+  // motion blur works on a strip extended by the blur length above and below
+  TALL = [0, 1, 2].map(() => canvasOf(Math.ceil(W / 2), H + 2 * (MAX_BLUR + 4)));
+  smooth(canvas);
 
   const jobs = [];
   for (const [colour, list] of Object.entries(cfg.shots)) {
@@ -197,6 +205,7 @@ async function load(cfg) {
   // the end card's page colour is the average of its three backdrops
   const ends = cfg.end.order.map(endShot);
   END_BG = [0, 1, 2].map(k => ends.reduce((s, e) => s + e.a.bg[k], 0) / ends.length);
+  END_FLOOR = [0, 1, 2].map(k => ends.reduce((s, e) => s + e.a.floor[k], 0) / ends.length);
 
   TL = timeline();
   return {
@@ -250,6 +259,7 @@ function timeline() {
       }
       return;
     }
+    const pickColour = sec.deck ? deck(sec.deck, rand) : colourDeck;
     for (let i = 0; i < n; i++) {
       const dir = ((i + si) % 2) ? -1 : 1;
       const at = [];
@@ -258,7 +268,7 @@ function timeline() {
       for (const b of at) {
         // a strip that closes for the end card holds what it has
         if (i >= keep && b > CFG.end.beat - 0.5) continue;
-        cuts.push({ strip: i, beat: b, colour: sec.colour === 'mix' ? null : sec.colour, dir });
+        cuts.push({ strip: i, beat: b, colour: sec.colour === 'mix' ? null : sec.colour, dir, pickColour });
       }
     }
   });
@@ -278,7 +288,7 @@ function timeline() {
     if (!c.shot) {
       if (!c.colour) {
         const near = [showing[c.strip - 1], showing[c.strip + 1]].filter(Boolean).map(s => s.colour);
-        for (let k = 0; k < 6 && (!c.colour || near.includes(c.colour)); k++) c.colour = colourDeck();
+        for (let k = 0; k < 6 && (!c.colour || near.includes(c.colour)); k++) c.colour = c.pickColour();
       }
       const banned = [showing[c.strip], showing[c.strip - 1], showing[c.strip + 1]];
       let pool = SHOTS[c.colour].filter(s => !banned.includes(s));
@@ -301,7 +311,7 @@ function timeline() {
   const E = CFG.end;
   E.order.forEach((colour, i) => {
     strips[i].push({ t: beatTime(E.beat + i * E.stagger), beat: E.beat + i * E.stagger, colour,
-                     shot: endShot(colour), framing: { end: true }, dir: i % 2 ? -1 : 1 });
+                     shot: endShot(colour), framing: { end: true }, dir: i % 2 ? -1 : 1, col: i });
   });
 
   for (const s of strips) {
@@ -328,27 +338,38 @@ function stripLayout(t) {
   const n = CFG.strips.count, gap = CFG.strips.gap, keep = CFG.end.order.length;
   const p = easeInOut(clamp((t - beatTime(CFG.end.beat)) / 0.35, 0, 1));
   const weights = Array.from({ length: n }, (_, i) => i < keep ? 1 : 1 - p);
-  const gaps = gap * (keep - 1) + gap * (n - keep) * (1 - p);
+  // the gaps between the columns that stay close too, so the end card reads
+  // as one backdrop
+  const gp = endGapClose(t);
+  const gaps = gap * (keep - 1) * (1 - gp) + gap * (n - keep) * (1 - p);
   const unit = (W - gaps) / weights.reduce((a, b) => a + b, 0);
   // the gap in front of a closing strip closes with it
   let x = 0;
   return weights.map((w, i) => {
-    if (i > 0) x += gap * Math.min(1, w);
+    if (i > 0) x += gap * Math.min(1, w) * (i < keep ? 1 - gp : 1);
     const r = { x, w: w * unit };
     x += r.w;
     return r;
   });
 }
 
+function endGapClose(t) {
+  return easeInOut(clamp((t - beatTime(CFG.end.beat + 0.5)) / 0.4, 0, 1));
+}
+
 /* where the end card's figure sits: her full height between the tagline and
    the bottom of the frame, centred on her in the column */
-function endPlacement(shot, sw) {
+function endPlacement(shot, sw, col) {
   const a = shot.a, im = shot.im, ih = im.naturalHeight, iw = im.naturalWidth;
   const top = endLayout().figureTop;
   const s = (CFG.end.subjectBottom - top) / ((a.y1 - a.y0) * ih);
   let dy = top - a.y0 * ih * s;
   dy = Math.max(dy, H - ih * s);                // never leave a gap under her
-  const dx = clamp(sw / 2 - a.cx * iw * s, sw - iw * s, 0);
+  let dx = sw / 2 - a.cx * iw * s;
+  // the outer columns keep all of her inside the frame
+  if (col === 0) dx = Math.max(dx, 14 - a.x0 * iw * s);
+  if (col === CFG.end.order.length - 1) dx = Math.min(dx, sw - 14 - a.x1 * iw * s);
+  dx = clamp(dx, sw - iw * s, 0);
   return { s, dx, dy, dw: iw * s, dh: ih * s };
 }
 
@@ -356,19 +377,38 @@ function drawShot(c, ev, sw, yOff, held) {
   const im = ev.shot.im, iw = im.naturalWidth, ih = im.naturalHeight, a = ev.shot.a;
 
   if (ev.framing.end) {
-    const p = endPlacement(ev.shot, sw);
-    c.fillStyle = rgb(END_BG);
-    c.fillRect(0, 0, sw, H);
-    c.drawImage(im, p.dx, p.dy + yOff, p.dw, p.dh);
-    // feather the photo's top edge into the page so the backdrop runs on up
-    if (p.dy > 0) {
-      const y = p.dy + yOff, f = 420;
-      const g = c.createLinearGradient(0, y, 0, y + f);
-      g.addColorStop(0, rgba(END_BG, 1));
-      g.addColorStop(1, rgba(END_BG, 0));
-      c.fillStyle = g;
-      c.fillRect(0, y - 1, sw, f + 1);
-    }
+    const p = endPlacement(ev.shot, sw, ev.col);
+    // the page: the photos' own backdrop, from its top colour down to the floor
+    const pg = c.createLinearGradient(0, 0, 0, H);
+    pg.addColorStop(0, rgb(END_BG));
+    pg.addColorStop(0.45, rgb(END_BG));
+    pg.addColorStop(1, rgb(END_FLOOR));
+    c.fillStyle = pg;
+    c.fillRect(0, -H, sw, 3 * H);
+    // the photo, feathered into the page above her head and along the edges it
+    // shares with the other columns
+    const y = p.dy + yOff;
+    const f = clamp(endLayout().figureTop - 24 - p.dy, 60, 420);
+    const t = END_TMP.getContext('2d');
+    t.globalCompositeOperation = 'copy';
+    t.drawImage(im, p.dx, y, p.dw, p.dh);
+    t.globalCompositeOperation = 'destination-in';
+    const vg = t.createLinearGradient(0, y, 0, y + f);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.6, 'rgba(0,0,0,0.75)');
+    vg.addColorStop(1, 'rgba(0,0,0,1)');
+    t.fillStyle = vg;
+    t.fillRect(0, 0, sw, H);
+    const e = 36, last = CFG.end.order.length - 1;
+    const hg = t.createLinearGradient(0, 0, sw, 0);
+    hg.addColorStop(0, `rgba(0,0,0,${ev.col > 0 ? 0 : 1})`);
+    hg.addColorStop(e / sw, 'rgba(0,0,0,1)');
+    hg.addColorStop(1 - e / sw, 'rgba(0,0,0,1)');
+    hg.addColorStop(1, `rgba(0,0,0,${ev.col < last ? 0 : 1})`);
+    t.fillStyle = hg;
+    t.fillRect(0, 0, sw, H);
+    t.globalCompositeOperation = 'source-over';
+    c.drawImage(END_TMP, 0, 0, sw, H, 0, 0, sw, H);
     return;
   }
 
@@ -392,37 +432,83 @@ function drawShot(c, ev, sw, yOff, held) {
   c.drawImage(im, dx, dy + yOff, dw, dh);
 }
 
-function paintStrip(c, events, sw, t) {
-  c.fillStyle = CFG.gap;
-  c.fillRect(0, 0, sw, H);
+/* the strip's cut in force at t and how far its whip has got */
+function cutAt(events, t) {
   let k = -1;
   for (let j = 0; j < events.length && events[j].t <= t; j++) k = j;
+  return k;
+}
+const progress = (ev, t) => easeOutExpo(clamp((t - ev.t) / CFG.cut.slide, 0, 1));
+
+/* paint strip i into c (already translated so the strip's top is at 0); pad
+   rows above and below are painted too, for the motion blur to draw on */
+function paintStrip(c, events, sw, t, pad = 0, p = null) {
+  c.fillStyle = CFG.gap;
+  c.fillRect(0, -pad, sw, H + 2 * pad);
+  const k = cutAt(events, t);
   if (k < 0) return;
   const cur = events[k], prev = events[k - 1];
-  const p = easeOutExpo(clamp((t - cur.t) / CFG.cut.slide, 0, 1));
+  if (p == null) p = progress(cur, t);
   if (p < 1 && prev) drawShot(c, prev, sw, cur.dir * H * p, t - prev.t);
   drawShot(c, cur, sw, -cur.dir * H * (1 - p), t - cur.t);
 }
 
+/* vertical box blur of length L over the top `h` rows of src, by doubling:
+   each pass averages the running box with a shifted copy of itself (or adds
+   one shifted sample), so there are about 2·log2(L) blends instead of L, and
+   8-bit rounding never compounds into banding. Taps cover y-(L-1)..y. */
+function boxBlurV(src, sw, h, L) {
+  let [A, B] = [TALL[1], TALL[2]];
+  const a = A.getContext('2d');
+  a.globalCompositeOperation = 'copy';
+  a.drawImage(src, 0, 0, sw, h, 0, 0, sw, h);
+  a.globalCompositeOperation = 'source-over';
+  let n = 1;
+  for (const bit of L.toString(2).slice(1)) {
+    for (const add of bit === '1' ? [false, true] : [false]) {
+      const b = B.getContext('2d');
+      b.globalCompositeOperation = 'copy';
+      b.drawImage(A, 0, 0, sw, h, 0, 0, sw, h);
+      b.globalCompositeOperation = 'source-over';
+      b.globalAlpha = add ? 1 / (n + 1) : 0.5;
+      b.drawImage(add ? src : A, 0, 0, sw, h - n, 0, n, sw, h - n);
+      b.globalAlpha = 1;
+      [A, B] = [B, A];
+      n = add ? n + 1 : n * 2;
+    }
+  }
+  return A;
+}
+
+const MAX_BLUR = 1200;
 function drawStrips(g, t) {
   const lay = stripLayout(t);
-  const { slide, shutter } = CFG.cut;
-  const sc = SCRATCH.getContext('2d');
+  const { shutter } = CFG.cut;
   TL.strips.forEach((events, i) => {
     const { x, w } = lay[i];
     if (w < 1) return;
     const sw = Math.ceil(w);
-    // motion blur only while a whip is in flight: average enough sub-instants
-    // over the shutter that the copies merge into a streak
-    const moving = events.some(e => t + shutter / 2 >= e.t && t - shutter / 2 <= e.t + slide);
-    const N = moving ? 48 : 1;
     g.save();
     g.beginPath(); g.rect(x, 0, w, H); g.clip();
-    for (let k = 0; k < N; k++) {
-      const ts = N === 1 ? t : t - shutter / 2 + shutter * k / (N - 1);
-      paintStrip(sc, events, sw, ts);
-      g.globalAlpha = 1 / (k + 1);
+    // Both photos in a strip move together, so its motion blur over the
+    // shutter is a vertical box blur as long as the distance they travel.
+    const k = cutAt(events, t + shutter / 2);
+    const ev = events[k];
+    const p0 = ev ? progress(ev, t - shutter / 2) : 1, p1 = ev ? progress(ev, t + shutter / 2) : 1;
+    const L = Math.min(MAX_BLUR, Math.round(H * Math.abs(p1 - p0)));
+    if (L < 2) {
+      const sc = SCRATCH.getContext('2d');
+      paintStrip(sc, events, sw, t);
       g.drawImage(SCRATCH, 0, 0, sw, H, x, 0, sw, H);
+    } else {
+      const pad = L + 2, h = H + 2 * pad;
+      const tc = TALL[0].getContext('2d');
+      tc.setTransform(1, 0, 0, 1, 0, pad);
+      // composed at the middle of the shutter, inside the cut it belongs to
+      paintStrip(tc, events, sw, Math.max(t, ev.t), pad, (p0 + p1) / 2);
+      tc.setTransform(1, 0, 0, 1, 0, 0);
+      const out = boxBlurV(TALL[0], sw, h, L);
+      g.drawImage(out, 0, pad + Math.floor((L - 1) / 2), sw, H, x, 0, sw, H);
     }
     g.restore();
   });

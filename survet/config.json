@@ -38,7 +38,7 @@
     { "colour": "sand", "start": 4, "end": 8, "first": 0, "phase": 1, "every": 1, "stagger": 0.25 },
     { "colour": "black", "start": 8, "end": 12, "every": 1, "stagger": 0.25 },
     { "colour": "brown", "start": 12, "end": 16, "every": 1, "stagger": 0.25 },
-    { "colour": "mix", "start": 16, "end": 18, "every": 0.5, "stagger": 0.125 }
+    { "colour": "mix", "start": 16, "end": 18, "every": 0.5, "stagger": 0.125, "deck": ["brown", "brown", "black", "sand"] }
   ],
   "punch": { "beats": [4, 8, 12, 16, 18], "amount": 0.05, "decay": 0.4 },
   "flash": { "beats": [4], "amount": 0.45, "decay": 0.3 },
@@ -49,13 +49,13 @@
     "stagger": 0.25,
     "order": ["sand", "black", "brown"],
     "logo": "survet/brand/logo-trim.png",
-    "logoWidth": 560,
-    "logoTop": 300,
+    "logoWidth": 500,
+    "logoTop": 270,
     "logoBeat": 18.5,
     "font": "Syne[wght].ttf",
     "tagline": 46,
     "taglineInk": "#151413",
-    "subjectBottom": 1865,
+    "subjectBottom": 1700,
     "swatch": 20,
     "swatchGap": 72
   },
@@ -63,19 +63,14 @@
     { "name": "full", "z": 1.0 },
     { "name": "upper", "z": 1.45, "at": 0.28 },
     { "name": "lower", "z": 1.4, "at": 0.74 },
-    { "name": "head", "z": 1.85, "at": 0.1 },
-    { "name": "feet", "z": 1.75, "at": 0.94 },
+    { "name": "head", "z": 1.5, "at": 0.1 },
+    { "name": "feet", "z": 1.5, "at": 0.94 },
     { "name": "left", "z": 1.15, "dx": -0.07 },
     { "name": "right", "z": 1.15, "dx": 0.07 }
   ],
   "avoid": {
-    "black-floor-sit.jpg": ["feet"],
-    "black-worms-eye.jpg": ["feet"],
-    "black-walk-back.jpg": ["feet"],
-    "black-end.jpg": ["feet"],
-    "brown-end.jpg": ["feet"],
     "brown-back-walk.jpg": ["feet"],
-    "black-crouch.jpg": ["upper", "head", "left", "feet"],
+    "black-crouch.jpg": ["upper", "head", "left"],
     "brown-neckline.jpg": ["left", "right"]
   },
   "grade": { "black-crouch.jpg": "neutral", "black-walk-back.jpg": "neutral" },
