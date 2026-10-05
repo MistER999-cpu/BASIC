@@ -1,0 +1,68 @@
+{
+  "output": { "width": 1080, "height": 1920, "fps": 30, "duration": 10, "crf": 17 },
+
+  "word": "survêt",
+  "seed": 7,
+
+  "background": "#F1F0F3",
+  "colours": {
+    "sand":  "#B39A6E",
+    "black": "#2E2A2B",
+    "brown": "#5E3527"
+  },
+
+  "text": {
+    "mode": "contrast",
+    "contrast": { "sand": "black", "black": "sand", "brown": "sand" },
+    "y": 0.56,
+    "width": 0.8,
+    "maxHeight": 0.2,
+    "appearAt": 0.55,
+    "fontEvery": 0.24,
+    "colourLag": 0.08
+  },
+
+  "strips": { "count": 4, "gap": 6 },
+
+  "cut": { "slide": 0.2, "shutter": 0.017, "drift": 34, "breathe": 0.05 },
+
+  "sections": [
+    { "colour": "sand",  "start": 0.0, "end": 3.3, "every": 0.48, "stagger": 0.12 },
+    { "colour": "black", "start": 3.3, "end": 5.7, "every": 0.48, "stagger": 0.06 },
+    { "colour": "brown", "start": 5.7, "end": 8.1, "every": 0.48, "stagger": 0.06 },
+    { "colour": "mix",   "start": 8.1, "end": 9.1, "every": 0.17, "stagger": 0.04 }
+  ],
+  "end": { "start": 9.1, "span": 0.42, "y": 0.17, "order": ["sand", "black", "brown"], "brand": "BASIC" },
+
+  "framings": [
+    { "z": 1.0, "x": 0.5,  "y": 0.5  },
+    { "z": 1.55, "x": 0.5, "y": 0.32 },
+    { "z": 1.45, "x": 0.5, "y": 0.74 },
+    { "z": 2.3, "x": 0.5,  "y": 0.17 },
+    { "z": 2.1, "x": 0.44, "y": 0.9  },
+    { "z": 1.8, "x": 0.6,  "y": 0.56 },
+    { "z": 1.2, "x": 0.4,  "y": 0.45 }
+  ],
+
+  "fonts": [
+    { "file": "Anton-Regular.ttf" },
+    { "file": "AbrilFatface-Regular.ttf" },
+    { "file": "RubikMonoOne-Regular.ttf" },
+    { "file": "Pacifico-Regular.ttf" },
+    { "file": "Monoton-Regular.ttf" },
+    { "file": "DMSerifDisplay-Italic.ttf" },
+    { "file": "Bungee-Regular.ttf" },
+    { "file": "InstrumentSerif-Italic.ttf" },
+    { "file": "FasterOne-Regular.ttf" },
+    { "file": "Unbounded[wght].ttf", "weight": 900 },
+    { "file": "Shrikhand-Regular.ttf" },
+    { "file": "SpaceMono-Bold.ttf" },
+    { "file": "YesevaOne-Regular.ttf" },
+    { "file": "PermanentMarker-Regular.ttf" },
+    { "file": "MajorMonoDisplay-Regular.ttf" },
+    { "file": "Syne[wght].ttf", "weight": 800 },
+    { "file": "ArchivoBlack-Regular.ttf" },
+    { "file": "BebasNeue-Regular.ttf" }
+  ],
+  "endFont": "Anton-Regular.ttf"
+}

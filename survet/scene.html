@@ -1,0 +1,312 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* "survêt" fast-cut: vertical strips of shots that whip in and out on a
+   staggered cadence, one colourway at a time, under the word set in a new
+   typeface on every beat. Everything is a pure function of t, so any frame can
+   be rendered on its own and a render is reproducible from config + seed. */
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let CFG, W, H, IMG = {}, FONTS = [], TL, SCRATCH;
+
+/* ---- helpers ------------------------------------------------------------ */
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let x = s;
+    x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const easeOutExpo = p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
+const easeInOut = p => p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2;
+
+/* a shuffled deck that reshuffles when empty and never deals the same card
+   twice in a row across the reshuffle */
+function deck(items, rand) {
+  let pile = [], last;
+  return () => {
+    if (!pile.length) {
+      pile = items.slice();
+      for (let i = pile.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [pile[i], pile[j]] = [pile[j], pile[i]];
+      }
+      if (pile.length > 1 && pile[pile.length - 1] === last) pile.unshift(pile.pop());
+    }
+    return last = pile.pop();
+  };
+}
+
+/* ---- loading ------------------------------------------------------------ */
+async function load(cfg) {
+  CFG = cfg;
+  W = canvas.width = cfg.output.width;
+  H = canvas.height = cfg.output.height;
+  SCRATCH = document.createElement('canvas');
+  SCRATCH.width = W; SCRATCH.height = H;
+
+  const jobs = [];
+  for (const [colour, list] of Object.entries(cfg.shots)) {
+    IMG[colour] = list.map(s => {
+      const im = new Image();
+      im.src = s.url;
+      jobs.push(im.decode());
+      return { name: s.name, im };
+    });
+  }
+  FONTS = cfg.fonts.map((f, i) => {
+    const family = `survet${i}`;
+    const face = new FontFace(family, `url("${f.url}")`, { weight: String(f.weight || 400) });
+    document.fonts.add(face);
+    jobs.push(face.load());
+    return { family, weight: f.weight || 400, file: f.file };
+  });
+  await Promise.all(jobs);
+  TL = timeline();
+  return { shots: Object.fromEntries(Object.entries(IMG).map(([k, v]) => [k, v.length])),
+           fonts: FONTS.length };
+}
+
+/* ---- timeline ----------------------------------------------------------- */
+function timeline() {
+  const rand = rng(CFG.seed);
+  const n = CFG.strips.count;
+  const colours = Object.keys(CFG.colours);
+  const shotDeck = Object.fromEntries(colours.map(c => [c, deck(IMG[c], rand)]));
+  const frameDeck = deck(CFG.framings, rand);
+  const colourDeck = deck(colours, rand);
+
+  const strips = Array.from({ length: n }, () => []);
+  CFG.sections.forEach((sec, si) => {
+    for (let i = 0; i < n; i++) {
+      // alternate the whip direction per strip, and flip it every section
+      const dir = ((i + si) % 2) ? -1 : 1;
+      for (let t = sec.start + i * sec.stagger; t < sec.end - 1e-6; t += sec.every) {
+        const colour = sec.colour === 'mix' ? colourDeck() : sec.colour;
+        strips[i].push({ t, colour, shot: shotDeck[colour](), framing: frameDeck(), dir });
+      }
+    }
+  });
+
+  // the end card: one strip per colourway, full length; the spare strips close
+  const end = CFG.end;
+  end.order.forEach((colour, i) => {
+    const shot = endShot(colour);
+    strips[i].push({ t: end.start + i * 0.07, colour, shot, framing: { end: true },
+                     dir: i % 2 ? -1 : 1 });
+  });
+
+  // drop any cut that would be cut off by the next one before it settles
+  for (const s of strips) {
+    s.sort((a, b) => a.t - b.t);
+    for (let k = s.length - 2; k >= 0; k--) {
+      if (s[k + 1].t - s[k].t < CFG.cut.slide * 0.75) s.splice(k, 1);
+    }
+  }
+
+  // font order: shuffled, no immediate repeats
+  const fontDeck = deck(FONTS.map((_, i) => i), rand);
+  const fontSeq = Array.from({ length: 200 }, fontDeck);
+  return { strips, fontSeq };
+}
+
+function endShot(colour) {
+  const list = IMG[colour];
+  return list.find(s => /end/i.test(s.name))
+      || list.find(s => /front/i.test(s.name))
+      || list[0];
+}
+
+/* ---- strips ------------------------------------------------------------- */
+function stripLayout(t) {
+  const n = CFG.strips.count, gap = CFG.strips.gap, keep = CFG.end.order.length;
+  const p = easeInOut(clamp((t - CFG.end.start) / 0.35, 0, 1));
+  const weights = Array.from({ length: n }, (_, i) => i < keep ? 1 : 1 - p);
+  const gaps = gap * (keep - 1) + gap * (n - keep) * (1 - p);
+  const unit = (W - gaps) / weights.reduce((a, b) => a + b, 0);
+  // the gap in front of a closing strip closes with it
+  let x = 0;
+  return weights.map((w, i) => {
+    if (i > 0) x += gap * Math.min(1, w);
+    const r = { x, w: w * unit };
+    x += r.w;
+    return r;
+  });
+}
+
+/* draw one shot into a strip-sized box at (0,0) */
+function drawShot(c, ev, sw, yOff, held) {
+  const im = ev.shot.im, iw = im.naturalWidth, ih = im.naturalHeight;
+  const { drift, breathe } = CFG.cut;
+
+  if (ev.framing.end) {
+    // full figure: scale so the middle half of the frame fills the strip width,
+    // sit it on the bottom edge and feather into the page above it
+    const s = sw / (iw * CFG.end.span);
+    const dw = iw * s, dh = ih * s;
+    if (dh >= H) {
+      c.drawImage(im, (sw - dw) / 2, H - dh + yOff, dw, dh);
+    } else {
+      const y = H - dh - 70 + yOff;
+      c.drawImage(im, (sw - dw) / 2, y, dw, dh);
+      const fade = (y0, y1) => {
+        const g = c.createLinearGradient(0, y0, 0, y1);
+        g.addColorStop(0, CFG.background);
+        g.addColorStop(1, CFG.background + '00');
+        c.fillStyle = g;
+        c.fillRect(0, Math.min(y0, y1) - 1, sw, Math.abs(y1 - y0) + 2);
+      };
+      fade(y, y + 140);
+      fade(y + dh, y + dh - 120);
+      c.fillStyle = CFG.background;
+      c.fillRect(0, y + dh, sw, H);
+    }
+    return;
+  }
+
+  const f = ev.framing;
+  const z = f.z * (1 + breathe * clamp(held, 0, 1));
+  const s = Math.max(sw / iw, H / ih) * z;
+  const dw = iw * s, dh = ih * s;
+  let dx = sw / 2 - f.x * dw;
+  let dy = H / 2 - f.y * dh + ev.dir * drift * held;
+  dx = clamp(dx, sw - dw, 0);
+  dy = clamp(dy, H - dh, 0);
+  c.drawImage(im, dx, dy + yOff, dw, dh);
+}
+
+/* paint strip i as it looks at instant t into c */
+function paintStrip(c, events, sw, t) {
+  c.fillStyle = CFG.background;
+  c.fillRect(0, 0, sw, H);
+  let k = -1;
+  for (let j = 0; j < events.length && events[j].t <= t; j++) k = j;
+  if (k < 0) return;
+  const cur = events[k], prev = events[k - 1];
+  const p = easeOutExpo(clamp((t - cur.t) / CFG.cut.slide, 0, 1));
+  if (p < 1 && prev) drawShot(c, prev, sw, cur.dir * H * p, t - prev.t);
+  drawShot(c, cur, sw, -cur.dir * H * (1 - p), t - cur.t);
+}
+
+function drawStrips(t) {
+  const lay = stripLayout(t);
+  const { slide, shutter } = CFG.cut;
+  TL.strips.forEach((events, i) => {
+    const { x, w } = lay[i];
+    if (w < 1) return;
+    const sw = Math.ceil(w);
+    // motion blur only while a whip is in flight: average sub-instants over
+    // the shutter, otherwise one sample
+    // with enough sub-instants that the copies merge into a streak
+    const moving = events.some(e => t + shutter / 2 >= e.t && t - shutter / 2 <= e.t + slide);
+    const N = moving ? 64 : 1;
+    const sc = SCRATCH.getContext('2d');
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, 0, w, H); ctx.clip();
+    for (let k = 0; k < N; k++) {
+      const ts = N === 1 ? t : t - shutter / 2 + shutter * k / (N - 1);
+      paintStrip(sc, events, sw, ts);
+      ctx.globalAlpha = 1 / (k + 1);
+      ctx.drawImage(SCRATCH, 0, 0, sw, H, x, 0, sw, H);
+    }
+    ctx.restore();
+  });
+}
+
+/* ---- word --------------------------------------------------------------- */
+function sectionAt(t) {
+  return CFG.sections.find(s => t >= s.start && t < s.end) || CFG.sections[CFG.sections.length - 1];
+}
+
+function wordColour(sec, fontStep) {
+  const names = Object.keys(CFG.colours);
+  if (sec.colour === 'mix') return CFG.colours[names[fontStep % names.length]];
+  const key = CFG.text.mode === 'match' ? sec.colour : CFG.text.contrast[sec.colour];
+  return CFG.colours[key];
+}
+
+/* set the word in a font, scaled so it lands at the target width (or height
+   cap) and centred on its own ink rather than its advance box */
+function setWord(word, font, cx, cy, targetW, maxH, colour, scale = 1) {
+  const probe = 200;
+  ctx.font = `${font.weight} ${probe}px "${font.family}"`;
+  const m = ctx.measureText(word);
+  const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+  const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  const size = probe * Math.min(targetW / inkW, maxH / inkH) * scale;
+  ctx.font = `${font.weight} ${size}px "${font.family}"`;
+  const m2 = ctx.measureText(word);
+  const x = cx - (m2.actualBoundingBoxRight - m2.actualBoundingBoxLeft) / 2;
+  const y = cy + (m2.actualBoundingBoxAscent - m2.actualBoundingBoxDescent) / 2;
+  ctx.fillStyle = colour;
+  ctx.fillText(word, x, y);
+  return { top: y - m2.actualBoundingBoxAscent, bottom: y + m2.actualBoundingBoxDescent };
+}
+
+function drawWord(t) {
+  const T = CFG.text;
+  if (t < T.appearAt) return;
+  if (t >= CFG.end.start) return drawEndWord(t);
+  const step = Math.floor((t - T.appearAt) / T.fontEvery);
+  const since = t - T.appearAt - step * T.fontEvery;
+  const pop = 1 + 0.07 * (1 - easeOutExpo(clamp(since / 0.1, 0, 1)));
+  const font = FONTS[TL.fontSeq[step % TL.fontSeq.length]];
+  setWord(CFG.word, font, W / 2, H * T.y, W * T.width, H * T.maxHeight,
+          wordColour(sectionAt(t - CFG.text.colourLag), step), pop);
+}
+
+function drawEndWord(t) {
+  const since = t - CFG.end.start;
+  const font = FONTS.find(f => f.file === CFG.endFont) || FONTS[0];
+  const p = easeOutExpo(clamp((since - 0.15) / 0.3, 0, 1));
+  ctx.save();
+  ctx.globalAlpha = p;
+  const box = setWord(CFG.word, font, W / 2, H * CFG.end.y, W * 0.86, H * 0.16,
+                      CFG.colours.black, 1 + 0.06 * (1 - p));
+
+  // brand line and the three colourway swatches under it
+  const q = easeOutExpo(clamp((since - 0.3) / 0.3, 0, 1));
+  ctx.globalAlpha = q;
+  ctx.fillStyle = CFG.colours.black;
+  ctx.font = `400 46px "${font.family}"`;
+  ctx.letterSpacing = '18px';
+  ctx.textAlign = 'center';
+  ctx.fillText(CFG.end.brand, W / 2 + 9, box.bottom + 95);
+  ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left';
+  CFG.end.order.forEach((c, i) => {
+    ctx.fillStyle = CFG.colours[c];
+    ctx.beginPath();
+    ctx.arc(W / 2 + (i - 1) * 62, box.bottom + 160, 17, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+/* ---- frame -------------------------------------------------------------- */
+function draw(t) {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = CFG.background;
+  ctx.fillRect(0, 0, W, H);
+  drawStrips(t);
+  drawWord(t);
+}
+
+window.SURVET = { load, draw };
+</script>
+</body>
+</html>
