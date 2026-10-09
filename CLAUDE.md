@@ -119,13 +119,13 @@ Filler-safe 9:16 crops in `assets/burgundy-ad/omni-crops/`: the sand wide (head 
 the white close (crop2: her hand resting on the outer thigh and the shorts hem) and the sand close (cami torso, arm and
 waistband seam). Prompts are neutral. If Omni still blocks them, Claude animates the stills in the edit (Ken Burns etc.).
 
-### End card (in progress)
-The user parked the 3 blocked clips. End card: split screen with the Set 1 model on the LEFT and the Set 2 model on the RIGHT,
-cycling through the colors (black → white → beige), a different pose per color, the SAME locked front camera in every image.
-Each image is 9:16 but sits in a half-width panel (540×1920), so the pose must stay within the central ~45% of the width.
-Leave the top ~22% empty for the BASIC logo. Even lighting, no wall shadow, deep burgundy (~#4A1E26) color lock.
-Generate the black image first, then use it as the camera/scale/light lock for every other end-card image (both sets).
-Set 1 poses: black standing tall (hands at her sides) | white hand on the opposite shoulder | sand tucking hair behind her ear, ankles crossed.
+### End card (in progress), REVISED by the user
+Split screen: the Set 1 model on the LEFT, the Set 2 model on the RIGHT, cycling through the colors with a different pose per color.
+**Shoot on a plain GREY studio background** (like the original product photos) so Claude can cut her out and composite her
+onto burgundy in the edit. **Only ONE reference image per prompt:** the original grey-background product photo for that color.
+Poses: cool, straightforward, compact (half-width panel). The camera block is IDENTICAL text in every prompt: straight-on front,
+50 mm, chest height, 4 m, level, full body centred, even light, crisp rim for clean edges, no props, no cast shadow on the wall.
+Set 1 poses: black: feet together, arms at her sides, chin up | white: one hand on her hip | sand: mid-step toward the camera.
 
 ### Set 2 animation (in progress), 4 s each, one prompt at a time, neutral product wording
 1 black wide: crane down as she steps toward the camera | 2 black close: slow arc + fingers smooth the sleeve hem (no tilt up)
