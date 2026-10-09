@@ -112,6 +112,12 @@ mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy bloc
   (#70323F / #652331) than the other shots (~#4A1E26), so it needs a color match in the edit and stronger color locks in later prompts.
 - S2-white-02-close: approved (floor level, bare foot stepping, mid-calf hem). The white leggings read slightly pink, so neutralise them in the grade.
 - S2-latte-01-wide: approved (seated on a burgundy block, forearms on knees, low 3/4 angle). Only 768×1376 here.
+- S2-latte-02-close: approved (side view seated, blurred block edge in the foreground, hands over the knee, sleeve hem, no face). **Set 2 stills done.**
+
+### Set 2 animation (in progress), 4 s each, one prompt at a time, neutral product wording
+1 black wide: crane down as she steps toward the camera | 2 black close: slow arc + fingers smooth the sleeve hem (no tilt up)
+3 white wide: truck right with her profile walk, shadow travelling on the wall | 4 white close: floor-level slide right, foot plants
+5 latte wide: slow arc + push-in, she lifts her gaze | 6 latte close: lateral slide right past the foreground block edge (wipe)
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
