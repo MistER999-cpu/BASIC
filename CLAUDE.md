@@ -134,7 +134,25 @@ Set 1 poses: black: feet together, arms at her sides, chin up | white: one hand 
   S1-black-01-wide.mp4, S1-black-02-close.mp4 (lips visible at the top, as in the still), S1-white-01-wide.mp4 (the paper backdrop
   edge shows on the left mid-clip, so punch in or crop). Set 1 white close, sand wide and sand close never animated: animate those
   stills in the edit. The end card stills could not be generated either: build the end card from the existing stills.
-- Waiting for the 6 Set 2 clips before editing.
+- Set 2 clips received (all 1080×1920, 24 fps, 4.0 s): S2-black-01-wide, S2-black-02-close, S2-white-01-wide,
+  S2-white-02-close, S2-latte-01-wide, S2-latte-02-close (ends with the block wiping the frame).
+  Defects: S2-black-01-wide: Omni added FLIP-FLOPS (frames ~16–80), so crop the feet / use the tail. S2-white-01-wide: Omni added
+  BLACK SANDALS (frames ~16–48) and the legs morph mid-clip, so use ~2.6–4.0 s, crop the feet, and fix its pinker wall in the grade.
+- **The user said "analyse and wait for my cue"**: do NOT render the edit until they say go.
+
+### Edit plan (proposed, awaiting cue)
+Music: Nightcall at ~92.3 BPM (beat 0.650 s, bar 2.60 s). Use the song window 9.53 s → 35.53 s (26 s ad). The build runs 9.5–12.1,
+the groove drops at **12.13**, an energy lift comes at **30.33**. Bar grid: 12.13, 14.73, 17.33, 19.93, 22.53, 25.13, 27.73, 30.33, 32.93.
+- Intro (9.53–12.13): dark, BASIC flicker, riser → drop cut.
+- Act 1 (12.13–22.53, 16 beats): S1 black wide 3b, black close 2b, white wide 3b, white close STILL 2b, sand wide STILL 3b,
+  sand close STILL 1b, then a 2-beat "02" title transition (RGB split, flash).
+- Act 2 (22.53–30.33, 12 beats): each S2 clip 2 beats, in order black wide, black close, white wide, white close, latte wide,
+  latte close (its block wipe lands on 30.33).
+- End card (30.33–35.53): split screen of approved stills (S1 left / S2 right), colors cycling every 2 beats, then a BASIC hold + fade.
+- Brand fonts: Inter (the storefront) + Instrument Serif (`/mnt/skills/examples/canvas-design/canvas-fonts/`).
+- VFX: on-beat cuts, whip-pan blur transitions, warm light-leak flashes, speed ramps, punch-ins, a burgundy grade unify, grain, vignette,
+  text "01 THE CAMI SET" / "02 THE TEE SET" + color labels. SFX (synthesised): sub boom on the drop/end card, whooshes, shutter clicks, riser.
+- Exports: one with music (preview) and one WITHOUT music (for Instagram, add Nightcall from the IG library).
 
 ### Set 2 animation (in progress), 4 s each, one prompt at a time, neutral product wording
 1 black wide: crane down as she steps toward the camera | 2 black close: slow arc + fingers smooth the sleeve hem (no tilt up)
