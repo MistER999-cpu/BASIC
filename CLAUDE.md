@@ -111,6 +111,7 @@ mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy bloc
 - S2-white-01-wide: approved (side-profile walk left→right, crisp shadow on the wall). Its wall reads brighter and pinker
   (#70323F / #652331) than the other shots (~#4A1E26), so it needs a color match in the edit and stronger color locks in later prompts.
 - S2-white-02-close: approved (floor level, bare foot stepping, mid-calf hem). The white leggings read slightly pink, so neutralise them in the grade.
+- S2-latte-01-wide: approved (seated on a burgundy block, forearms on knees, low 3/4 angle). Only 768×1376 here.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
