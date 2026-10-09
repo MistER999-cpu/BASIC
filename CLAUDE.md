@@ -127,6 +127,15 @@ Poses: cool, straightforward, compact (half-width panel). The camera block is ID
 50 mm, chest height, 4 m, level, full body centred, even light, crisp rim for clean edges, no props, no cast shadow on the wall.
 Set 1 poses: black: feet together, arms at her sides, chin up | white: one hand on her hip | sand: mid-step toward the camera.
 
+### Step 3 inputs (collecting)
+- Music: Kavinsky "Nightcall" (user upload) at `assets/burgundy-ad/audio/nightcall.mp3`, 256.9 s. It is **gitignored**
+  (copyrighted), so if the container resets, ask the user to re-upload it. Tell them to add the song from Instagram's library when posting.
+- Set 1 clips received (1080×1920, 24 fps, 4.0 s, with an audio track to discard) in `assets/burgundy-ad/clips/`:
+  S1-black-01-wide.mp4, S1-black-02-close.mp4 (lips visible at the top, as in the still), S1-white-01-wide.mp4 (the paper backdrop
+  edge shows on the left mid-clip, so punch in or crop). Set 1 white close, sand wide and sand close never animated: animate those
+  stills in the edit. The end card stills could not be generated either: build the end card from the existing stills.
+- Waiting for the 6 Set 2 clips before editing.
+
 ### Set 2 animation (in progress), 4 s each, one prompt at a time, neutral product wording
 1 black wide: crane down as she steps toward the camera | 2 black close: slow arc + fingers smooth the sleeve hem (no tilt up)
 3 white wide: truck right with her profile walk, shadow travelling on the wall | 4 white close: floor-level slide right, foot plants
