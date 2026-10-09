@@ -41,5 +41,14 @@ Workflow, one step at a time, each on the user's go:
    professional **Instagram ad** (9:16) with multiple visual effects and
    sound effects (ffmpeg is available in the container).
 
+### Burgundy spec (agreed)
+The target is the **iPhone 18 Pro Max "Burgundy"** finish: a deep, muted wine red
+with cherry undertones. Apple publishes no hex, so these are approximations:
+midtones ~#561427, highlights ≤ #7A2335, shadows ~#2A0710. Light it neutral
+(~5600K) so it doesn't drift brown or pink. Matte surface with a faint satin sheen.
+Workflow: generate one empty **master background plate** (a seamless
+cyclorama), then attach it as the background reference for every later shot.
+Variants: low-angle, high-angle floor and out-of-focus close-up plates.
+
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
