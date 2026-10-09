@@ -50,5 +50,18 @@ Workflow: generate one empty **master background plate** (a seamless
 cyclorama), then attach it as the background reference for every later shot.
 Variants: low-angle, high-angle floor and out-of-focus close-up plates.
 
+**Approved plate:** `assets/burgundy-ad/background-plate.jpg` (1116×2000).
+Sampled colors: wall top #3A0F19, wall centre #652C35, wall right #45131C,
+floor pool #8D4B55, floor bottom #431A20. A soft glow sits upper-left on the wall
+and a lit floor pool sits left-centre, so the key light comes from front-left.
+
+### Step 1 rules (agreed, in progress)
+- The user uploads **the plate + the model photo in the requested set/color** for each prompt.
+- **Two images per color:** (1) a medium-wide shot showing the top and bottom but not
+  the whole body, and (2) a close-up on one part of the outfit.
+- Order: Set 1 (black → white → sand), then Set 2 (black → white → latte).
+- **One prompt at a time.** Wait for the user's approval before giving the next one.
+- Vary the camera angle between shots so the edit can slide angle to angle.
+
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
