@@ -66,6 +66,9 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   describe a real burgundy paper-sweep studio and re-light the model inside it:
   a cast shadow on the sweep, burgundy bounce on the skin, matching perspective.
   Attach the model photo first and the color swatch second.
+- **Approved images** live in `assets/burgundy-ad/approved/`. The approved image for each color
+  is the scene/light reference for that color's close-up.
+  - S1-black-01-wide: approved (full body, front-left key, shadowless paper sweep look).
 - Vary the camera angle between shots so the edit can slide angle to angle.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
