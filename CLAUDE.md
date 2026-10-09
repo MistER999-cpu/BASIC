@@ -95,6 +95,8 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   (groin-centred framing plus a hand pulling the waistband) is the trigger. Replacing it with a new still:
   a side-profile waist detail, hand not touching the waistband. For future close-ups, avoid groin-centred framing
   and hands at the waistband or inner thigh; prefer side or profile views.
+  The side-profile replacement also failed, so the user chose to **SKIP clip 4** (no white close-up clip). The edit has to
+  cover the gap, e.g. with a speed-ramp or a still-frame push on the white wide shot.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
