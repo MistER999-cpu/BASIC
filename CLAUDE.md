@@ -73,9 +73,19 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   - S1-white-01-wide: approved (walking toward camera-left, looking back, full body, on the right third).
   - S1-white-02-close: approved (ribcage to thighs, her hand pulling the waistband, centre seam visible).
   - S1-sand-01-wide: approved (low angle from knee height, hands in her curls, rim-lit hair, wall darkening at the top).
+  - S1-sand-02-close: approved (seated on the floor, high angle, hand on the thigh hem, no face). **Set 1 stills done.**
 - Vary the camera angle between shots so the edit can slide angle to angle.
   **The user asked for MORE CREATIVE angles** (from the sand shots on): low/worm's-eye, overhead,
   Dutch tilt, foreground framing, dramatic perspective. Avoid plain eye-level shots.
+
+### Step 2 rules: Omni 1.1 Flash animation (Set 1 in progress)
+- Every clip is **exactly 4 seconds**, 9:16, and uses the approved still as its start frame. **One prompt at a time.**
+- **Never reveal the face in shots where it is out of frame** (both close-ups, for example). The camera must not
+  tilt or pan up to the face, so the AI never invents one.
+- Cool, premium camera moves, chained so the edit flows (shared direction of travel):
+  1 black wide: arc left→right + push-in | 2 black close: lateral slide right + strap slip
+  3 white wide: truck left with her walk | 4 white close: macro push-in + waistband stretch/snap
+  5 sand wide: low-angle crane rise + Dutch roll | 6 sand close: overhead slow rotate + push-in
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
