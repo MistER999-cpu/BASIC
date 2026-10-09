@@ -140,7 +140,16 @@ Set 1 poses: black: feet together, arms at her sides, chin up | white: one hand 
   BLACK SANDALS (frames ~16–48) and the legs morph mid-clip, so use ~2.6–4.0 s, crop the feet, and fix its pinker wall in the grade.
 - **The user said "analyse and wait for my cue"**: do NOT render the edit until they say go.
 
-### Edit plan (proposed, awaiting cue)
+### Final edit: DELIVERED (v1)
+The user said go: full creative freedom, ~15 s, **all on-screen text in French**, use their logo (`assets/brand/`; the cream version is
+generated from the original). Renderer: `tools/ad-edit/render_burgundy_ad.py` (numpy/PIL frames piped into ffmpeg, synthesised SFX).
+Re-render with `python3 tools/ad-edit/render_burgundy_ad.py` (about 6 min; it needs `assets/burgundy-ad/audio/nightcall.mp3`).
+Final: 17.8 s, 27 beats at 91.01 BPM, music from 10.7814 s. Outputs in `exports/` (gitignored, delivered to the user):
+`BASIC-burgundy-ad-avec-musique.mp4` (-14 LUFS) and `BASIC-burgundy-ad-sans-musique.mp4` (SFX only; on IG set Nightcall to start at 0:10).
+French copy: NOUVELLE COLLECTION / Deux ensembles. Trois teintes. / 01 — CARACO & CYCLISTE / 02 — T-SHIRT & CORSAIRE /
+Noir, Blanc, Sable, Latte / L’essentiel, pensé avec soin. / DÉCOUVREZ LA COLLECTION.
+
+### Edit plan (original proposal, superseded by the final edit above)
 Music: Nightcall at ~92.3 BPM (beat 0.650 s, bar 2.60 s). Use the song window 9.53 s → 35.53 s (26 s ad). The build runs 9.5–12.1,
 the groove drops at **12.13**, an energy lift comes at **30.33**. Bar grid: 12.13, 14.73, 17.33, 19.93, 22.53, 25.13, 27.73, 30.33, 32.93.
 - Intro (9.53–12.13): dark, BASIC flicker, riser → drop cut.

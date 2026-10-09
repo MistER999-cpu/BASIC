@@ -3,3 +3,4 @@ out/
 assets/base/*
 !assets/base/.gitkeep
 assets/burgundy-ad/audio/
+exports/
