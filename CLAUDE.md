@@ -97,6 +97,15 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   and hands at the waistband or inner thigh; prefer side or profile views.
   The side-profile replacement also failed, so the user chose to **SKIP clip 4** (no white close-up clip). The edit has to
   cover the gap, e.g. with a speed-ramp or a still-frame push on the white wide shot.
+  Clip 5 (sand wide) also failed, so the user moved on to the Set 2 stills. Set 1 clips that work so far: 1, 2, 3. Clip 6 is untried.
+
+### Set 2 stills (in progress), designed to be ANIMATION-SAFE for Omni
+No groin-centred or crotch-forward framing, no hands at the waistband or inner thigh, no low angles looking up
+between the legs, no raised-arm/armpit poses. Latte must read clearly as fabric. Creative but covered angles.
+Plan: 1 black wide (high angle from above, stepping toward camera) | 2 black close (side-profile shoulder:
+neckline + sleeve hem, chin cropped) | 3 white wide (side-profile walk, telephoto) | 4 white close (floor-level:
+mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy block, low 3/4 angle) |
+6 latte close (decided later, garment-safe).
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
