@@ -108,6 +108,8 @@ mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy bloc
 6 latte close (decided later, garment-safe).
 - S2-black-01-wide: approved (high angle, stepping toward camera, floor as background, head to mid-calf).
 - S2-black-02-close: approved (shoulder close-up, fingers on the sleeve hem, crew neck binding, chin edge only).
+- S2-white-01-wide: approved (side-profile walk left→right, crisp shadow on the wall). Its wall reads brighter and pinker
+  (#70323F / #652331) than the other shots (~#4A1E26), so it needs a color match in the edit and stronger color locks in later prompts.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
