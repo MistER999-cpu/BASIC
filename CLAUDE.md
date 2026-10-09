@@ -90,7 +90,11 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
 - **Content filter lesson:** Omni rejected the black close-up prompt that used "sensual", "lips", "breathing",
   skin focus and releasing the strap. Write close-ups as neutral **product detail demos**
   (adjust, smooth, show the clean finish), keep them short and garment-focused, and give a minimal fallback.
-- Progress: clip 1 (black wide) approved, clip 2 (black close, v2) approved.
+- Progress: clip 1 (black wide) approved, clip 2 (black close, v2) approved, clip 3 (white wide) approved.
+  Clip 4 (white close) failed Omni's filter 4 times, even with a crop and neutral text. The START IMAGE
+  (groin-centred framing plus a hand pulling the waistband) is the trigger. Replacing it with a new still:
+  a side-profile waist detail, hand not touching the waistband. For future close-ups, avoid groin-centred framing
+  and hands at the waistband or inner thigh; prefer side or profile views.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
