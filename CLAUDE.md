@@ -106,6 +106,7 @@ Plan: 1 black wide (high angle from above, stepping toward camera) | 2 black clo
 neckline + sleeve hem, chin cropped) | 3 white wide (side-profile walk, telephoto) | 4 white close (floor-level:
 mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy block, low 3/4 angle) |
 6 latte close (decided later, garment-safe).
+- S2-black-01-wide: approved (high angle, stepping toward camera, floor as background, head to mid-calf).
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
