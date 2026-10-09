@@ -114,6 +114,11 @@ mid-calf hem + bare foot stepping) | 5 latte wide (seated on a low burgundy bloc
 - S2-latte-01-wide: approved (seated on a burgundy block, forearms on knees, low 3/4 angle). Only 768×1376 here.
 - S2-latte-02-close: approved (side view seated, blurred block edge in the foreground, hands over the knee, sleeve hem, no face). **Set 2 stills done.**
 
+### Recovery of the blocked Set 1 stills
+Filler-safe 9:16 crops in `assets/burgundy-ad/omni-crops/`: the sand wide (head to cami hem, hands in her hair),
+the white close (crop2: her hand resting on the outer thigh and the shorts hem) and the sand close (cami torso, arm and
+waistband seam). Prompts are neutral. If Omni still blocks them, Claude animates the stills in the edit (Ken Burns etc.).
+
 ### Set 2 animation (in progress), 4 s each, one prompt at a time, neutral product wording
 1 black wide: crane down as she steps toward the camera | 2 black close: slow arc + fingers smooth the sleeve hem (no tilt up)
 3 white wide: truck right with her profile walk, shadow travelling on the wall | 4 white close: floor-level slide right, foot plants
