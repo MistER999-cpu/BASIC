@@ -71,7 +71,10 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   - S1-black-01-wide: approved (full body, front-left key, shadowless paper sweep look).
   - S1-black-02-close: approved (lips to bust, fingers lifting her left strap, warm rim on the shoulder).
   - S1-white-01-wide: approved (walking toward camera-left, looking back, full body, on the right third).
+  - S1-white-02-close: approved (ribcage to thighs, her hand pulling the waistband, centre seam visible).
 - Vary the camera angle between shots so the edit can slide angle to angle.
+  **The user asked for MORE CREATIVE angles** (from the sand shots on): low/worm's-eye, overhead,
+  Dutch tilt, foreground framing, dramatic perspective. Avoid plain eye-level shots.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
