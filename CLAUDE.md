@@ -61,6 +61,11 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   the whole body, and (2) a close-up on one part of the outfit.
 - Order: Set 1 (black → white → sand), then Set 2 (black → white → latte).
 - **One prompt at a time.** Wait for the user's approval before giving the next one.
+- **The plate is a COLOR REFERENCE ONLY, never a backdrop to paste onto.** The first
+  attempt came out as a cut-out pasted over the plate, and the user rejected it. Prompts must
+  describe a real burgundy paper-sweep studio and re-light the model inside it:
+  a cast shadow on the sweep, burgundy bounce on the skin, matching perspective.
+  Attach the model photo first and the color swatch second.
 - Vary the camera angle between shots so the edit can slide angle to angle.
 
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
