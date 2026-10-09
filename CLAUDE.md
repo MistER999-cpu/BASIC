@@ -87,5 +87,10 @@ and a lit floor pool sits left-centre, so the key light comes from front-left.
   3 white wide: truck left with her walk | 4 white close: macro push-in + waistband stretch/snap
   5 sand wide: low-angle crane rise + Dutch roll | 6 sand close: overhead slow rotate + push-in
 
+- **Content filter lesson:** Omni rejected the black close-up prompt that used "sensual", "lips", "breathing",
+  skin focus and releasing the strap. Write close-ups as neutral **product detail demos**
+  (adjust, smooth, show the clean finish), keep them short and garment-focused, and give a minimal fallback.
+- Progress: clip 1 (black wide) approved, clip 2 (black close, v2) approved.
+
 An unrequested step 1 draft (16-shot list, burgundy cyclorama set) exists only
 as a scratch file. Re-create it only when asked.
