@@ -6,6 +6,7 @@ reference clip (720x1280, scaled 1.5x here).
 
     python3 tools/grid-reveal.py assets/shoots/model1-outfit1   # -> out/model1-outfit1.mp4
     python3 tools/grid-reveal.py a.jpg b.jpg c.jpg d.jpg --out out/x.mp4 --seconds 3.5
+    python3 tools/grid-reveal.py assets/shoots/model2-outfit1 --focus 0.12,0.18,0.08,0.4
 
 Order is reading order: top-left, top-right, bottom-left, bottom-right. A
 folder is read in filename order. Each tile is cover-fitted into its current
@@ -54,6 +55,7 @@ def main():
     ap.add_argument("inputs", nargs="+", help="a folder of 4 images, or 4 image paths")
     ap.add_argument("--out")
     ap.add_argument("--seconds", type=float, default=3.5)
+    ap.add_argument("--focus", help="4 comma-separated small-tile focus values, e.g. 0.15,0.2,0.1,0.4")
     args = ap.parse_args()
 
     paths = args.inputs
@@ -67,7 +69,8 @@ def main():
     os.makedirs(os.path.dirname(out), exist_ok=True)
 
     imgs = [Image.open(p).convert("RGB") for p in paths]
-    small = [cover(im, TILE_W, TILE_H, f) for im, f in zip(imgs, FOCUS)]
+    focus = [float(v) for v in args.focus.split(",")] if args.focus else FOCUS
+    small = [cover(im, TILE_W, TILE_H, f) for im, f in zip(imgs, focus)]
     full = [cover(im, CX, CY, 0.5) for im in imgs]
 
     frames = round(args.seconds * FPS)
