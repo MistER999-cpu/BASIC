@@ -194,3 +194,20 @@ exactly how one ends up in a delivered cut.
 
 Reels are stepped by an explicit `setTime(t)` rather than `requestAnimationFrame`
 or the wall clock, so a render is reproducible frame-for-frame.
+
+---
+
+# Loading-glitch intro
+
+A 4-second, 1080×1350 opener: the two black flat-lay sets sit blurred behind
+spinners and a `LOADING` bar, glitch bursts tear the sharp product through and
+snap back to loading, then the bar completes and the outfits land sharp.
+
+```bash
+python3 tools/loading-intro.py                     # -> out/loading-intro.mp4
+python3 tools/loading-intro.py --stills 20,45,100  # review frames as PNG
+python3 tools/loading-intro.py --top a.jpg --bottom b.jpg --out out/other.mp4
+```
+
+The flat-lays live in `assets/flatlays/`. Progress keyframes, glitch bursts,
+colours and the label font are constants at the top of the script.
