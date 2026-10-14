@@ -211,3 +211,19 @@ python3 tools/loading-intro.py --top a.jpg --bottom b.jpg --out out/other.mp4
 
 The flat-lays live in `assets/flatlays/`. Progress keyframes, glitch bursts,
 colours and the label font are constants at the top of the script.
+
+---
+
+# 2×2 grid reveal
+
+A 3.5-second, 1080×1920 clip: four shots pop in one by one as a small grid on
+white, each snaps out to fill its quarter of the frame, then the full grid
+holds. Hard cuts only, with frame timings measured from the reference clip.
+
+```bash
+python3 tools/grid-reveal.py assets/shoots/model1-outfit1   # -> out/model1-outfit1.mp4
+python3 tools/grid-reveal.py a.jpg b.jpg c.jpg d.jpg --out out/x.mp4 --seconds 4
+```
+
+Shots go top-left, top-right, bottom-left, bottom-right; a folder is read in
+filename order. `FOCUS` in the script sets how each small tile is cropped.
