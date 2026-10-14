@@ -23,6 +23,7 @@ FRAMES = 4 * FPS
 BLUE = (111, 155, 203)       # bar fill + label, from the reference clip
 NAVY = (46, 58, 85)          # bar outline
 FONT = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"
+LABEL, DONE = "LOADING", "COMPLETE"   # loader text; tools/reel.py swaps in French
 
 # progress keyframes (frame, percent): stalls and jumps read as a real download
 PROGRESS = [(0, 0), (8, 4), (17, 19), (24, 23), (38, 36), (46, 57), (60, 64),
@@ -112,9 +113,9 @@ def draw_loader(base, pct, f, alpha=1.0, dx=0):
     font = ImageFont.truetype(FONT, 44 * ss)
 
     if f >= COMPLETE:
-        word, dots = "COMPLETE", ""
+        word, dots = DONE, ""
     else:
-        word, dots = "LOADING", " " + "." * ((f // 6) % 4)
+        word, dots = LABEL, " " + "." * ((f // 6) % 4)
     track = 4 * ss
     widths = [d.textlength(ch, font=font) for ch in word]
     word_w = sum(widths) + track * (len(word) - 1)

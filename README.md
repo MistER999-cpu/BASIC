@@ -227,3 +227,34 @@ python3 tools/grid-reveal.py a.jpg b.jpg c.jpg d.jpg --out out/x.mp4 --seconds 4
 
 Shots go top-left, top-right, bottom-left, bottom-right; a folder is read in
 filename order. `FOCUS` in the script sets how each small tile is cropped.
+
+---
+
+# Launch reel (Instagram)
+
+The 24-second launch reel stitches everything above into one Instagram-ready
+file: the loading-glitch intro, the four grid reveals and a logo end card, with
+French copy on frosted cards and an original soundtrack.
+
+```bash
+python3 tools/reel.py            # -> out/basic-reel.mp4 (+ out/basic-reel-audio.wav)
+python3 tools/reel.py --cover    # -> out/basic-reel-cover.jpg (reel cover, safe for the 3:4 grid crop)
+python3 tools/reel.py --stills 185,305,700   # review frames
+```
+
+| Time | Section |
+|---|---|
+| 0–4 s | Loading intro (French loader), drop on 4.0 s |
+| 4–20 s | Four grids, 4 s each, with a text card and a push-to-white exit |
+| 20–24 s | Logo end card: tagline, the three colours, call to action |
+
+- **Copy:** `assets/reel-copy.json` (French, proofread). A card that is too wide
+  stops the render, so nothing ships cut off.
+- **Soundtrack:** `tools/reel-audio.py` synthesizes a 120 BPM deep-house track and
+  every sound effect from scratch, so there is no licensed music to clear. Every
+  hit is placed from the same timeline as the picture. The mix is normalised
+  to -14 LUFS for Instagram.
+- **Fonts:** Cormorant Garamond (SIL OFL, free for commercial use) in
+  `assets/fonts`, and Inter.
+- **Logo:** `assets/brand/basic-logo.png`.
+- **Output:** 1080×1920, 30 fps, H.264 High with bt709 tags, AAC 48 kHz, faststart.
