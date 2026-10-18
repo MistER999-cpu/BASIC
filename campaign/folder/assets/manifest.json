@@ -1,0 +1,51 @@
+{
+ "folder_back": {
+  "w": 811,
+  "h": 666
+ },
+ "folder_front": {
+  "w": 811,
+  "h": 666,
+  "top": 124
+ },
+ "tank_white": {
+  "w": 587,
+  "h": 900
+ },
+ "tank_beige": {
+  "w": 597,
+  "h": 900
+ },
+ "tank_brown": {
+  "w": 567,
+  "h": 900
+ },
+ "tank_black": {
+  "w": 565,
+  "h": 900
+ },
+ "cami-set_white": {
+  "w": 460,
+  "h": 900
+ },
+ "cami-set_beige": {
+  "w": 456,
+  "h": 900
+ },
+ "cami-set_black": {
+  "w": 453,
+  "h": 900
+ },
+ "tee-set_white": {
+  "w": 428,
+  "h": 900
+ },
+ "tee-set_beige": {
+  "w": 425,
+  "h": 900
+ },
+ "tee-set_black": {
+  "w": 422,
+  "h": 900
+ }
+}

@@ -233,3 +233,32 @@ Set 2 review:
 - Beige `#B38C79` against a `#B68F7C` target — on target.
 - White `#E3DBDA` and black `#373033` have the same drift as set 1 and get the
   same correction to the tank values.
+
+## Part 1 — folder burst (rendered)
+
+[`folder/folder-burst.mp4`](folder/folder-burst.mp4) — 5.0s, 1080×1920, 30fps,
+8-sample motion blur, no audio yet.
+
+| Time | Beat |
+|---|---|
+| 0.0s | Folder already dropping in; name types itself "Les BASIC’s" |
+| 0.66 / 0.86s | Click selects (blue Finder highlight), double-click opens |
+| 0.9–1.4s | Front flap tilts open on its hinge; folder glides up to make room |
+| 1.22 / 1.58 / 1.94s | Three waves out of the pocket: tank ×4, cami set ×3, tee set ×3 |
+| ~2.8s | All ten settled in a colour-sorted grid with filenames; flap closes |
+| 3.36s | Cursor selects `tank_beige` |
+| 3.55–3.93s | Quick Look window springs open from the icon |
+| 4.25–4.70s | Quick Look expands to full screen — the handover to part 2 |
+
+Rebuild:
+
+```bash
+python3 tools/folder_assets.py          # cut-outs -> campaign/folder/assets/
+node src/folder/render.mjs --stills 0.7,1.3,2.9   # quick check -> out/folder-stills/
+node src/folder/render.mjs              # full render (~3 min)
+```
+
+Timings are one table at the top of `src/folder/scene.html` (`T`). The cursor
+is drawn in code; the folder panels are the generated images in
+`folder/source/`, cut out on one shared canvas so they stay registered.
+To land on music, move `click2`, `waves` and `qlOpen` onto the beats.

@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Inter; font-weight: 500; src: url('file:///usr/share/fonts/opentype/inter/Inter-Medium.otf'); }
+  @font-face { font-family: Inter; font-weight: 400; src: url('file:///usr/share/fonts/opentype/inter/Inter-Regular.otf'); }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #F4F0EA; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F4F0EA;
+           font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+  #grain { position: absolute; inset: 0; opacity: .045; mix-blend-mode: multiply; z-index: 0; }
+  .abs { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+  #sel { background: rgba(0,0,0,.075); border-radius: 26px; z-index: 0; }
+  #back { z-index: 1; }
+  #front { z-index: 3; }
+  #label { z-index: 3; white-space: nowrap; font-weight: 500; color: #1D1D1F;
+           transform-origin: 50% 0; text-align: center; }
+  #label .txt { padding: .06em .3em; border-radius: .22em; }
+  #label .caret { display: inline-block; width: .07em; height: 1.05em; margin-left: .04em;
+                  vertical-align: -.16em; background: #1D1D1F; }
+  .item { z-index: 2; }
+  .item img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .item .hl { position: absolute; inset: -14px -18px; border-radius: 18px; background: rgba(0,0,0,.08); opacity: 0; }
+  .item .cap { position: absolute; left: 50%; top: calc(100% + 14px); transform: translateX(-50%);
+               white-space: nowrap; font-size: 26px; font-weight: 500; color: #1D1D1F; }
+  .item .cap span { padding: 2px 8px; border-radius: 6px; }
+  #dim { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 9; }
+  #ql { z-index: 10; overflow: hidden; background: #F2F2F4; display: none;
+        box-shadow: 0 40px 90px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.06); }
+  #ql .bar { position: absolute; left: 0; right: 0; top: 0; height: 64px; display: flex;
+             align-items: center; justify-content: center; font-size: 25px; font-weight: 500; color: #3A3A3C;
+             background: #ECECEE; border-bottom: 1px solid rgba(0,0,0,.08); }
+  #ql .dots { position: absolute; left: 24px; top: 23px; display: flex; gap: 12px; }
+  #ql .dots i { width: 18px; height: 18px; border-radius: 50%; display: block; }
+  #ql img { position: absolute; object-fit: contain; }
+  #cursor { z-index: 20; filter: drop-shadow(1px 3px 3px rgba(0,0,0,.35)); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="sel" class="abs"></div>
+  <img id="back" class="abs">
+  <img id="front" class="abs">
+  <div id="label" class="abs"><span class="txt"></span><span class="caret"></span></div>
+  <div id="dim"></div>
+  <div id="ql" class="abs">
+    <div class="bar"><div class="dots"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></div><span class="title"></span></div>
+    <img>
+  </div>
+  <svg id="cursor" class="abs" width="44" height="64" viewBox="0 0 22 32">
+    <path d="M1.5 1.5 V25.5 L7.3 19.9 L11.2 28.9 L14.9 27.3 L11 18.4 L18.6 18.4 Z"
+          fill="#000" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" paint-order="stroke"/>
+  </svg>
+</div>
+<script>
+/* ---------------------------------------------------------------------------
+   Timeline, in seconds. Everything that moves is a pure function of t, so a
+   render is reproducible frame for frame.
+--------------------------------------------------------------------------- */
+const T = {
+  dropIn:   [-0.10, 0.40],      // folder settles in; frame 0 is already mid-drop
+  typing:   [0.06, 0.045],      // start, seconds per character
+  enter:    0.62,               // caret disappears - name committed
+  click1:   0.66, click2: 0.86, // select, then double-click
+  move:     [0.90, 1.38],       // folder glides up and shrinks to make room
+  flapOpen: [0.95, 1.30],
+  flapShut: [2.28, 2.52],
+  waves:    [1.22, 1.58, 1.94], // one wave per item
+  stagger:  0.07,
+  rise:     0.20,               // out of the pocket
+  fall:     0.56,               // lob down to the grid
+  qlMove:   [2.95, 3.30], qlClick: 3.36,
+  qlOpen:   [3.55, 3.93],
+  qlFull:   [4.25, 4.70],
+};
+const NAME = 'Les BASIC’s';
+const FLAP_DEG = -36;
+
+const BIG   = { cx: 540, cy: 905, w: 720 };   // hook framing
+const SMALL = { cx: 540, cy: 405, w: 400 };   // after it makes room for the grid
+const ICON_H = 240, ICON_W = 210;
+const ROWS = [765, 1075, 1385];
+const COLS = { 4: [150, 410, 670, 930], 3: [280, 540, 800] };
+
+const ITEMS = [
+  ['tank_white', 'tank_beige', 'tank_brown', 'tank_black'],
+  ['cami-set_white', 'cami-set_beige', 'cami-set_black'],
+  ['tee-set_white', 'tee-set_beige', 'tee-set_black'],
+];
+const QL_ITEM = 'tank_beige';
+
+/* ---- easing -------------------------------------------------------------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp  = (a, b, u) => a + (b - a) * u;
+const prog  = (t, [a, b]) => clamp((t - a) / (b - a));
+const outCubic   = u => 1 - Math.pow(1 - u, 3);
+const inOutCubic = u => u < .5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3) / 2;
+const outBack = (u, s = 1.70158) => 1 + (s + 1) * Math.pow(u - 1, 3) + s * Math.pow(u - 1, 2);
+const spring  = u => u <= 0 ? 0 : u >= 1 ? 1 : 1 - Math.exp(-6 * u) * Math.cos(10 * u);
+const qbez = (a, c, b, u) => (1-u)*(1-u)*a + 2*u*(1-u)*c + u*u*b;
+
+let M, $ = s => document.querySelector(s), items = [];
+
+window.build = async (manifest, assetBase) => {
+  M = manifest;
+  $('#back').src  = assetBase + 'folder_back.png';
+  $('#front').src = assetBase + 'folder_front.png';
+  for (const el of [$('#back'), $('#front')]) { el.style.width = M.folder_back.w + 'px'; el.style.height = M.folder_back.h + 'px'; }
+
+  // static paper grain
+  const g = $('#grain'), gx = g.getContext('2d'), id = gx.createImageData(g.width, g.height);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < id.data.length; i += 4) { const v = 128 + (rnd() - .5) * 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
+  gx.putImageData(id, 0, 0); g.style.width = '1080px'; g.style.height = '1920px';
+
+  ITEMS.forEach((row, w) => row.forEach((name, i) => {
+    const m = M[name], h = ICON_H, wd = Math.min(ICON_W, m.w / m.h * h);
+    const el = document.createElement('div');
+    el.className = 'item abs';
+    el.style.width = wd + 'px'; el.style.height = h + 'px';
+    el.innerHTML = `<div class="hl"></div><img src="${assetBase}${name}.png"><div class="cap"><span>${name}</span></div>`;
+    $('#stage').appendChild(el);
+    const k = items.length;
+    items.push({ el, name, w, i, wd, h,
+      x: COLS[row.length][i], y: ROWS[w],
+      launch: T.waves[w] + i * T.stagger,
+      rot: (k % 2 ? 1 : -1) * (7 + 3 * w),
+      spread: (i - (row.length - 1) / 2) * 70 });
+  }));
+
+  const q = M[QL_ITEM];
+  $('#ql img').src = assetBase + QL_ITEM + '.png';
+  $('#ql .title').textContent = QL_ITEM;
+
+  await document.fonts.ready;
+  await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+};
+
+/* ---- folder geometry ----------------------------------------------------- */
+function folderAt(t) {
+  const u = inOutCubic(prog(t, T.move));
+  const cx = lerp(BIG.cx, SMALL.cx, u), cy = lerp(BIG.cy, SMALL.cy, u);
+  const s = lerp(BIG.w, SMALL.w, u) / M.folder_back.w;
+  const d = prog(t, T.dropIn);
+  const dropY = (1 - spring(d)) * -70;
+  const alpha = clamp((t - T.dropIn[0]) / 0.16);
+  const w = M.folder_back.w * s, h = M.folder_back.h * s;
+  const left = cx - w / 2, top = cy - h / 2 + dropY;
+  return { s, left, top, w, h, alpha, cx,
+           frontTop: top + M.folder_front.top * s,
+           frontH: (M.folder_back.h - M.folder_front.top) * s };
+}
+const SMALL_S = SMALL.w / 811;
+
+/* ---- cursor -------------------------------------------------------------- */
+const CURSOR = [ // t, x, y (hotspot)
+  [0.00, 900, 1500], [0.62, 552, 930], [0.95, 552, 930], [1.60, 870, 1640],
+  [T.qlMove[0], 870, 1640], [T.qlMove[1], 430, 800],
+];
+function cursorAt(t) {
+  let p = CURSOR[0];
+  for (let k = 1; k < CURSOR.length; k++) {
+    const a = CURSOR[k-1], b = CURSOR[k];
+    if (t <= b[0]) { const u = inOutCubic(clamp((t - a[0]) / (b[0] - a[0]))); return [lerp(a[1], b[1], u), lerp(a[2], b[2], u)]; }
+    p = b;
+  }
+  return [p[1], p[2]];
+}
+const pressAt = t => [T.click1, T.click2, T.qlClick].reduce((m, c) => Math.min(m, Math.abs(t - c - 0.04)), 9) < 0.05;
+
+/* ---- one frame ----------------------------------------------------------- */
+window.setTime = t => {
+  const f = folderAt(t);
+
+  // folder panels
+  const base = `translate(${f.left}px,${f.top}px) scale(${f.s})`;
+  $('#back').style.transform = base;
+  $('#back').style.opacity = f.alpha;
+  const flap = FLAP_DEG * (outBack(prog(t, T.flapOpen), 1.2) - inOutCubic(prog(t, T.flapShut)));
+  // hinge on the bottom edge, in the panel's own (unscaled) pixels
+  const hw = M.folder_back.w / 2, hh = M.folder_back.h;
+  $('#front').style.transform =
+    `${base} translate(${hw}px,${hh}px) perspective(1500px) rotateX(${flap}deg) translate(${-hw}px,${-hh}px)`;
+  $('#front').style.opacity = f.alpha;
+
+  // selection highlight: on at click 1, off as the folder opens
+  const selOn = clamp((t - T.click1) / 0.05) * (1 - clamp((t - 0.95) / 0.2));
+  const pad = 26 * f.s / (BIG.w / 811);
+  Object.assign($('#sel').style, { width: f.w + 2*pad + 'px', height: f.h + 2*pad + 'px', opacity: selOn,
+    transform: `translate(${f.left - pad}px,${f.top - pad}px)` });
+
+  // name: types itself, then commits; blue pill while selected
+  const n = clamp(Math.floor((t - T.typing[0]) / T.typing[1]) + 1, 0, NAME.length);
+  const txt = $('#label .txt'); txt.textContent = NAME.slice(0, n);
+  const caretOn = t < T.enter && (n < NAME.length || Math.floor(t / 0.25) % 2 === 0);
+  $('#label .caret').style.visibility = caretOn ? 'visible' : 'hidden';
+  txt.style.background = selOn > .5 ? '#2563EB' : 'transparent';
+  txt.style.color = selOn > .5 ? '#fff' : '#1D1D1F';
+  const fs = 42 * f.s / (BIG.w / 811);
+  Object.assign($('#label').style, { fontSize: fs + 'px', opacity: f.alpha, width: '600px',
+    transform: `translate(${f.cx - 300}px,${f.top + f.h + 18 * f.s / (BIG.w / 811)}px)` });
+
+  // garments
+  const smallFrontTop = SMALL.cy - M.folder_back.h * SMALL_S / 2 + M.folder_front.top * SMALL_S;
+  for (const it of items) {
+    const el = it.el, dt = t - it.launch;
+    if (dt < 0) { el.style.opacity = 0; continue; }
+    el.style.opacity = 1;
+    let x, y, sc, rot, lift, z;
+    const peakSc = 0.55;
+    const pk = { x: lerp(f.cx + it.spread * f.s, it.x, 0.3),
+                 y: smallFrontTop - it.h * peakSc / 2 - 28 };
+    if (dt < T.rise) {
+      const u = outCubic(dt / T.rise);
+      const sx = f.cx + it.spread * f.s, sy = f.frontTop + f.frontH * 0.45;
+      x = lerp(sx, pk.x, u); y = lerp(sy, pk.y, u);
+      sc = lerp(0.25, peakSc, u); rot = it.rot * lerp(0.4, 1, u); lift = 1; z = 2;
+    } else {
+      const p = clamp((dt - T.rise) / T.fall), u = inOutCubic(p);
+      const c = { x: lerp(pk.x, it.x, 0.7), y: pk.y - 40 };
+      x = qbez(pk.x, c.x, it.x, u); y = qbez(pk.y, c.y, it.y, u);
+      sc = lerp(peakSc, 1, outBack(p, 1.6)); rot = it.rot * (1 - outBack(p, 1.4));
+      lift = 1 - outCubic(p); z = 4;
+    }
+    el.style.zIndex = z;
+    el.style.transform = `translate(${x - it.wd/2}px,${y - it.h/2}px) translate(${it.wd/2}px,${it.h/2}px) rotate(${rot}deg) scale(${sc}) translate(${-it.wd/2}px,${-it.h/2}px)`;
+    el.querySelector('img').style.filter =
+      `drop-shadow(0 ${4 + 26*lift}px ${6 + 22*lift}px rgba(0,0,0,${0.13 - 0.03*lift}))`;
+    const landed = clamp((dt - T.rise - T.fall * 0.8) / (T.fall * 0.3));
+    el.querySelector('.cap').style.opacity = landed;
+  }
+
+  // Quick Look on one piece
+  const sel = items.find(i => i.name === QL_ITEM);
+  const qSel = clamp((t - T.qlClick) / 0.05);
+  sel.el.querySelector('.hl').style.opacity = qSel;
+  const cap = sel.el.querySelector('.cap span');
+  cap.style.background = qSel > .5 ? '#2563EB' : 'transparent';
+  cap.style.color = qSel > .5 ? '#fff' : '#1D1D1F';
+
+  const qo = prog(t, T.qlOpen), qf = inOutCubic(prog(t, T.qlFull));
+  const ql = $('#ql');
+  if (qo <= 0) { ql.style.display = 'none'; $('#dim').style.opacity = 0; }
+  else {
+    ql.style.display = 'block';
+    const o = outBack(qo, 1.25);
+    const from = { x: sel.x - sel.wd/2, y: sel.y - sel.h/2, w: sel.wd, h: sel.h };
+    const win  = { x: 90, y: 360, w: 900, h: 1220 };
+    const full = { x: 0, y: 0, w: 1080, h: 1920 };
+    const r = k => lerp(lerp(from[k], win[k], o), full[k], qf);
+    const X = r('x'), Y = r('y'), W = r('w'), H = r('h');
+    Object.assign(ql.style, { width: W + 'px', height: H + 'px', transform: `translate(${X}px,${Y}px)`,
+      borderRadius: lerp(26 * clamp(o * 1.5), 0, qf) + 'px', opacity: clamp(qo * 4) });
+    const barH = 64 * (1 - qf);
+    const bar = ql.querySelector('.bar');
+    bar.style.opacity = clamp(o) * (1 - qf); bar.style.transform = `translateY(${-64 * qf}px)`;
+    const padP = lerp(40, 120, qf) * clamp(W / win.w);
+    Object.assign(ql.querySelector('img').style, { left: padP + 'px', top: barH + padP + 'px',
+      width: W - 2*padP + 'px', height: H - barH - 2*padP + 'px' });
+    $('#dim').style.opacity = 0.22 * clamp(qo * 2);
+  }
+
+  // cursor
+  const [cx, cy] = cursorAt(t);
+  const press = pressAt(t) ? 0.86 : 1;
+  const cur = $('#cursor');
+  cur.style.transform = `translate(${cx - 3}px,${cy - 3}px) scale(${press})`;
+  cur.style.opacity = 1 - clamp((t - T.qlOpen[0]) / 0.15);
+};
+</script>
+</body>
+</html>
