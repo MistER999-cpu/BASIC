@@ -4,7 +4,7 @@ Analysis and source material for the BASIC video. Generation tools: Nano Banana
 2.1 (images) and Omni 1.1 Flash (video). No prompts yet — this file holds what
 we know, so the prompt pack can be written once all outfit sets are in.
 
-**Status:** waiting for outfit sets 1 and 2.
+**Status:** tank and set 1 in; waiting for set 2.
 
 ## Brand
 
@@ -100,9 +100,47 @@ Open points:
 - Taupe backdrop is close to the beige and brown tanks, which makes cut-outs
   bleed at the edges.
 
-### Set 1
+### Set 1 — cami crop top + bike shorts
 
-_Pending._
+Matching two-piece in a matte cotton-stretch jersey: cropped cami with thin
+spaghetti straps and a soft V/scoop neck, high-rise bike shorts ending
+mid-thigh with a centre-front seam. Three colourways: white, beige, black.
+
+Two models:
+
+- **Model A** — shoulder-length dark curly hair, olive skin, brown eyes. Reads
+  as the tank model, but smiling and slightly softer in the face; check the
+  likeness holds before mixing her across items.
+- **Model B** — long straight auburn-brown hair, centre part, fair skin, curvier
+  build.
+
+All five: full length, head to toe, barefoot, same pose (weight on one leg,
+feet lightly crossed, hands relaxed at the thighs), soft smile. Flat cool
+light-grey backdrop, about rgb(168,168,170) — not the tank's warm taupe.
+
+| File | Colour | Model |
+|---|---|---|
+| [`1-white-model-a.jpg`](looks/set-1/1-white-model-a.jpg) | White | A |
+| [`2-beige-model-a.jpg`](looks/set-1/2-beige-model-a.jpg) | Beige | A |
+| [`3-black-model-a.jpg`](looks/set-1/3-black-model-a.jpg) | Black | A |
+| [`4-beige-model-b.jpg`](looks/set-1/4-beige-model-b.jpg) | Beige | B |
+| [`5-black-model-b.jpg`](looks/set-1/5-black-model-b.jpg) | Black | B |
+
+Open points:
+
+- Already full length with feet in frame — ready for the slide as they are,
+  unlike the tank looks.
+- Barefoot here, while the tank looks will need shoes. Pick one rule for the
+  whole video.
+- Same pose ×5, as with the tank — the slide wants variation.
+- No white on Model B. Intentional, or still to come?
+- Beige sits close to both models' skin tones; at slide scale it can read as
+  bare skin. Worth weighing against a contrasting background or decoration.
+- Grey backdrop contrasts well with all three colours, so cut-outs should be
+  clean — except white against grey at the strap edges, which is the closest
+  pair.
+- Cool grey here vs warm taupe for the tank: once cut out this no longer
+  matters, but the two sets were lit slightly differently (this one cooler).
 
 ### Set 2
 
@@ -110,7 +148,7 @@ _Pending._
 
 ## Still needed
 
-- Outfit sets 1 and 2
+- Outfit set 2
 - Music track (all timing goes on its beats)
 - Final folder contents
 - CTA wording, if any
