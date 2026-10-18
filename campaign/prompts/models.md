@@ -7,8 +7,8 @@ they cut out cleanly and line up as one row in the meadow.
 | # | Item | Colour | Model | Pose | Silhouette | Status |
 |---|---|---|---|---|---|---|
 | 1 | Tank | Beige | A | S-curve contrapposto, arm behind head, thumb in waistband | Tall | Approved (file not yet received) |
-| 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Prompt ready |
-| 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | |
+| 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Approved (file not yet received) |
+| 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Prompt ready |
 | 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | |
 | 5 | Cami set | White | A | Street-editorial crouch, forearms on knees | Lowest | |
 | 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | |
@@ -98,4 +98,46 @@ BACKGROUND:
 - Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
 
 DO NOT: change her face or hair colour, change the garments' colour or shape, tuck the T-shirt in, add shoes, socks, jewellery, logos, text or props, add motion blur, or crop any part of her body.
+```
+
+## Figure 3 — Model A, tank, brown, winged lean
+
+Attach: image 1 `looks/tank/3-brown-raw-denim.jpg`, image 2 `flatlays/tank/brown.jpg`,
+image 3 the approved figure 1 (same model: face lock, plus series match).
+Keeps the look's belt, gold cuff and hoops; swap for "No belt, no jewellery." to
+match figures 1 and 2.
+
+```
+Using image 1 as the reference, create a full-length, head-to-toe high-fashion editorial photograph of the same woman wearing the same outfit, barefoot, in a strong editorial pose. Image 2 is the exact garment she is wearing on top; match it precisely. Image 3 is the same woman in another photo from the same series: keep her face identical to image 3, and match its lighting, camera angle, scale, background and colour grade exactly.
+
+THE WOMAN (keep identical to images 1 and 3):
+- Same face, features, skin tone and eyes: early 20s, warm olive skin, brown eyes, natural no-makeup look. Expression calm, unsmiling, quietly confident, lips relaxed and closed.
+- Same shoulder-length dark brown curly hair with a centre part, same volume and curl pattern, a few curls lifted by a light breeze.
+- Same body shape and proportions.
+
+THE OUTFIT (do not change):
+- Top: the sleeveless high mock-neck tank from image 2, rich chocolate brown (about #55362B), fine matte cotton-stretch jersey, wide shoulder straps, clean bound armholes, close fitted body, tucked in. Same colour, neckline height, shoulder width and fit as image 2 — no new seams, logos or details.
+- Bottoms: the same dark raw indigo denim jeans as image 1, high-waisted, wide straight leg, full length, with the same orange contrast topstitching, hems resting on the tops of her bare feet.
+- The same tan leather belt with the rectangular brass buckle as image 1, the same gold sculptural cuff on her wrist and the same small gold hoop earrings.
+- Barefoot. No shoes, no socks, no other jewellery.
+
+POSE — winged lean:
+- Body facing the camera, square to the lens.
+- Both hands placed flat on her lower back, behind her, out of sight; elbows pointing out to the sides like wings, forming a strong triangle on each side of her waist.
+- Torso leaning forward from the hips toward the camera by about 15 degrees, back long and straight, shoulders down and open so the tank's neckline, shoulders and fit stay fully visible.
+- Knees softly bent and drawn slightly toward each other, feet hip-width apart with the right foot turned slightly inward.
+- Chin pushed gently forward, eyes looking straight into the lens.
+- Natural, anatomically correct arms and feet.
+
+CAMERA AND LIGHT (identical for the whole series):
+- Vertical 9:16 frame, full length, head to toe, nothing cropped, centred horizontally.
+- Scale: frame her as if she stood fully upright with the top of her head at about 6% from the top edge and the soles of her feet at about 92% from the top edge. Do not zoom in or out for the pose.
+- Camera at knee height, tilted slightly upward, 85mm lens look, no wide-angle distortion.
+- Soft diffused daylight, as outdoors on a bright overcast day: light coming gently from above and slightly front-left, soft shadows, no hard shadows, no rim light.
+- Photorealistic high-fashion editorial photography, true-to-life colour, fine film grain, sharp focus from head to toe.
+
+BACKGROUND:
+- Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
+
+DO NOT: change her face or hair, change the tank's colour or shape, hide the tank behind her arms, add shoes, socks, extra jewellery, logos, text or props, or crop any part of her body.
 ```
