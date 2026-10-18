@@ -1,53 +1,81 @@
-# Meadow panorama — Nano Banana 2.1
+# Meadow panorama — six continuous 9:16 tiles (Nano Banana 2.1)
 
-One wide plate for the part 2 slide: about 6000×1920 (≈3:1), six figures plus
-an empty stretch for the logo. Matches the figures: horizon at ~70% of height
-(knee-height camera tilted slightly up), soft overcast light from the front-left.
-Too wide for one generation, so: Step A at the widest ratio (21:9), then Step B
-extends it to the right (repeat if still short).
+v1 (a single autumn panorama, extended to the right) was rejected: too yellow,
+and too narrow without the extension. v2 is a green meadow, as in reference B,
+built from six vertical 9:16 tiles, each continuing the previous one. Each
+tile repeats the right 20% of the previous tile on its left edge; the overlaps
+are aligned and blended at compositing, and colour drift is evened out there.
+Six tiles at 20% overlap give about 5 screens of pan: six figures plus tile 6
+as the open logo stretch. Always chain from the immediately previous tile.
 
-## Step A — base
+## Tile 1
 
-No attachments.
+Optional attachment: image 1 `references/B-watercolour-style.jpg`, for the
+look of the grass and sky only.
 
 ```
-Ultra-wide panoramic landscape photograph of a quiet autumn meadow, no people, no animals, no buildings.
+Vertical 9:16 photograph, the first frame of a continuous left-to-right panorama of a lush green summer meadow, no people, no animals, no buildings. If an image is attached, use it only as a reference for the look of the green grass and the pale sky — ignore the people and the painted flowers in it completely.
 
 COMPOSITION:
-- The horizon sits low, at about 70% of the image height from the top, perfectly level across the whole width.
-- The bottom 30% is a softly rolling meadow of dry autumn grass, seed heads and a few faded wildflowers. In the very foreground the grass is soft and ankle-high, low enough for bare feet to stand in; it rises a little toward the horizon.
-- The top 70% is an enormous, almost empty sky: hazy, overcast, pale cream fading to warm ivory near the horizon, very soft and even, no visible sun, no dramatic clouds, just a gentle haze.
-- A few thin bare stems and dried grass plumes break the horizon here and there, spaced far apart.
-- The scene is evenly composed across the width with no strong focal point, so it can be panned across smoothly.
+- The horizon sits low, at about 70% of the image height from the top, perfectly level.
+- The bottom 30% is a dense natural meadow of fresh green grass in varied greens, from deep green to soft sage, with a few taller grass stems, seed heads and the odd small white wildflower. In the very foreground the grass is soft and ankle-high, low enough for bare feet to stand in.
+- The top 70% is a calm, almost empty sky: hazy, bright and soft, pale cream-white with a faint warm glow near the horizon, no visible sun, no dramatic clouds.
+- A few thin grass stems and wild plants rise above the horizon line here and there, spaced far apart.
 
 CAMERA AND LIGHT:
-- Shot from a low camera at knee height, looking very slightly upward, 50mm lens look, no fisheye or wide-angle distortion, no vignette.
-- Soft diffused daylight on a bright overcast day, light coming gently from above and slightly from the left, soft shadows only, no hard shadows, no sun flare.
+- Low camera at knee height, looking very slightly upward, 50mm lens look, no fisheye, no wide-angle distortion, no vignette.
+- Soft diffused daylight on a bright hazy day, light coming gently from above and slightly from the left, soft shadows only, no hard shadows, no sun flare.
 
 STYLE:
-- Muted, desaturated, warm palette: bone, oat, sand, wheat and faded olive green.
-- Editorial fashion campaign look, medium-format film, fine natural grain, calm and airy, lots of negative space.
+- Natural, fresh, slightly soft colour: true greens in the grass, never yellow or dry; airy pale sky.
+- Editorial fashion campaign look, medium-format film, fine natural grain, calm and open, lots of negative space.
 - Photorealistic, sharp focus from foreground to horizon.
 
-DO NOT include: people, animals, trees in the foreground, fences, paths, roads, buildings, power lines, the sun, birds, text or logos.
+DO NOT include: people, animals, trees, bushes, fences, paths, roads, buildings, power lines, the sun, birds, text or logos. No dry, yellow or autumn grass.
 ```
 
-## Step B — extend right
+## Tiles 2–5
 
-Attach: image 1 the Step A result.
+Attach: image 1 the previous tile.
 
 ```
-Extend image 1 to the right, roughly doubling its width with new scenery that continues it seamlessly: the same meadow, the same dry autumn grass and seed heads, the same horizon at exactly the same height and perfectly level, the same hazy pale cream sky, the same soft overcast light from the left, the same muted colours and film grain.
+Create the NEXT frame of the same continuous panorama: the scene immediately to the right of image 1, as if the camera slid sideways to the right.
 
-In the new section, gradually thin out the stems and plumes along the horizon, so that the last third of the image is almost completely open: just low grass and soft sky, calm and empty, with plenty of room for a logo in the sky.
+OVERLAP — very important:
+- The left 20% of the new image must show exactly the same content as the right 20% of image 1: the same grass, the same stems, the same sky, at the same size and the same height, so the two images overlap and can be joined seamlessly.
+- From there, continue the meadow naturally to the right with new grass, stems and sky.
 
-Keep the original part of image 1 exactly as it is. No visible seam, no change in colour, light or horizon height. No people, animals, buildings, the sun, text or logos.
+KEEP IDENTICAL TO IMAGE 1:
+- Vertical 9:16 frame.
+- The horizon at exactly the same height, about 70% from the top, perfectly level.
+- The same lush green grass, the same pale hazy cream-white sky, the same soft light from the left, the same colours, grain and camera height.
+- A few thin stems and wild plants rising above the horizon, spaced far apart.
+
+DO NOT include: people, animals, trees, bushes, fences, paths, buildings, the sun, birds, text or logos. No dry, yellow or autumn grass. Do not change the colour, light or horizon height.
 ```
 
-## Checklist
+## Tile 6 — logo stretch
 
-- [ ] Horizon low (~70%) and level end to end
-- [ ] Sky pale, hazy, empty — no sun, no dramatic clouds
-- [ ] Foreground grass soft and ankle-high
-- [ ] No visible seam between A and B
-- [ ] Last stretch open for the logo
+Attach: image 1 tile 5.
+
+```
+Create the LAST frame of the same continuous panorama: the scene immediately to the right of image 1, as if the camera slid sideways to the right.
+
+OVERLAP — very important:
+- The left 20% of the new image must show exactly the same content as the right 20% of image 1: the same grass, stems and sky, at the same size and height, so the two images join seamlessly.
+
+THIS FRAME IS THE CALM ENDING:
+- Continue the meadow to the right, but let it open up: no more tall stems above the horizon, just low, even green grass along the bottom and a wide, empty, soft pale sky above, with plenty of clear space in the sky for a logo.
+
+KEEP IDENTICAL TO IMAGE 1:
+- Vertical 9:16 frame, the horizon at exactly the same height (about 70% from the top) and level, the same lush green grass, the same pale hazy sky, the same soft light from the left, the same colours, grain and camera height.
+
+DO NOT include: people, animals, trees, buildings, the sun, birds, text or logos. No dry or yellow grass.
+```
+
+## Checklist per tile
+
+- [ ] Grass green, not yellow
+- [ ] Horizon at the same height as the previous tile, level
+- [ ] Left 20% repeats the previous tile's right 20%
+- [ ] No people, sun, trees or buildings
