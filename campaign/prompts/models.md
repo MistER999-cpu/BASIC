@@ -8,8 +8,8 @@ they cut out cleanly and line up as one row in the meadow.
 |---|---|---|---|---|---|---|
 | 1 | Tank | Beige | A | S-curve contrapposto, arm behind head, thumb in waistband | Tall | Approved (file not yet received) |
 | 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Approved (file not yet received) |
-| 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Prompt ready |
-| 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | |
+| 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Approved (file not yet received) |
+| 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | Prompt ready |
 | 5 | Cami set | White | A | Street-editorial crouch, forearms on knees | Lowest | |
 | 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | |
 
@@ -140,4 +140,45 @@ BACKGROUND:
 - Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
 
 DO NOT: change her face or hair, change the tank's colour or shape, hide the tank behind her arms, add shoes, socks, extra jewellery, logos, text or props, or crop any part of her body.
+```
+
+## Figure 4 — Model B, cami set, beige, wide lunge
+
+Attach: image 1 `looks/set-1/4-beige-model-b.jpg`, image 2 `flatlays/set-1/beige.jpg`,
+image 3 the approved figure 2 (same model: face lock, plus series match).
+
+```
+Using image 1 as the reference, create a full-length, head-to-toe high-fashion editorial photograph of the same woman wearing the same outfit, barefoot, in a strong, low, wide editorial pose. Image 2 shows the exact garments; match them precisely. Image 3 is the same woman in another photo from the same series: keep her face identical to image 3, and match its lighting, camera angle, scale, background and colour grade exactly.
+
+THE WOMAN (keep identical to images 1 and 3):
+- Same face, features, skin tone and eyes: early 20s, fair skin, natural no-makeup look. Expression calm, unsmiling, quietly confident, lips relaxed and closed, eyes on the lens.
+- Same long straight auburn-brown hair with a centre part, a few strands lifted by a light breeze.
+- Same curvy body shape and proportions.
+
+THE OUTFIT (do not change):
+- Top: the cropped camisole from image 2 in light nude beige (about #D5B3A1), smooth matte cotton-modal stretch jersey, thin spaghetti straps about 1 cm wide, soft shallow V-shaped scoop neckline with a narrow binding, slim straight body, straight cropped hem ending just above the navel.
+- Bottoms: the matching high-rise bike shorts in the same beige jersey, flat waistband, mid-thigh length with coverstitched hems.
+- Top and bottoms exactly the same beige. The garment edges, straps, neckline and hems must read clearly against her skin. No new seams, logos or details.
+- Barefoot. No shoes, no socks, no jewellery.
+
+POSE — wide editorial lunge:
+- Body facing the camera.
+- Right leg stepped wide out to her right side with the knee deeply bent, right foot flat on the ground and turned out; left leg extended long and straight to the other side, left foot flat. A low, wide, strong triangle.
+- Torso upright and lifted, angled slightly toward the bent knee, shoulders open so the camisole's neckline, straps and fit are fully visible.
+- Right hand resting lightly on the right thigh just above the knee, fingers relaxed and natural.
+- Left arm raised, left hand pushing her hair back from her face at the crown, fingers hidden in her hair, elbow pointing up and out.
+- Chin level, eyes looking straight into the lens.
+- Natural, anatomically correct hands and feet.
+
+CAMERA AND LIGHT (identical for the whole series):
+- Vertical 9:16 frame, full length, head to toe, nothing cropped, centred horizontally.
+- Scale: frame her as if she stood fully upright with the top of her head at about 6% from the top edge and the soles of her feet at about 92% from the top edge. Do not zoom in or out for the pose: in this low lunge her head sits lower in the frame.
+- Camera at knee height, tilted slightly upward, 85mm lens look, no wide-angle distortion.
+- Soft diffused daylight, as outdoors on a bright overcast day: light coming gently from above and slightly front-left, soft shadows, no hard shadows, no rim light.
+- Photorealistic high-fashion editorial photography, true-to-life colour, fine film grain, sharp focus from head to toe.
+
+BACKGROUND:
+- Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
+
+DO NOT: change her face or hair colour, change the garments' colour or shape, lengthen the shorts or the camisole, cover the camisole with her arms, add shoes, socks, jewellery, logos, text or props, or crop any part of her body.
 ```
