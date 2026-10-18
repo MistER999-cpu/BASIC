@@ -10,8 +10,8 @@ they cut out cleanly and line up as one row in the meadow.
 | 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Approved (file not yet received) |
 | 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Approved (file not yet received) |
 | 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | Approved (file not yet received) |
-| 5 | Cami set | White | A | Seated on the ground, leaning back on one hand, one knee up (replaces the crouch) | Lowest | Prompt ready (v2) |
-| 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | |
+| 5 | Cami set | White | A | Seated on the ground, leaning back on one hand, one knee up (replaces the crouch) | Lowest | Approved (file not yet received) |
+| 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | Prompt ready |
 
 Rules for the series:
 
@@ -235,4 +235,52 @@ BACKGROUND:
 - Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
 
 DO NOT: copy any pose from the reference images, have her stand, lunge or squat, change her face from image 3, make her smile, change the garments' colour or shape, cover the camisole with her arms, add shoes, socks, jewellery, logos, text or props, zoom in, or crop any part of her body.
+```
+
+## Figure 6 — Model B, tee set, black, finale stretch
+
+Attach: image 1 `looks/set-2/5-black-model-b.jpg`, image 2 `flatlays/set-2/black.jpg`,
+image 3 the approved figure 2 (face lock, plus series match). Framed with the
+raised hands at ~4% and soles at ~94%, so the figure is smaller than the rest;
+all six are matched to one body scale at compositing.
+
+```
+Create a NEW full-length, head-to-toe high-fashion editorial photograph of the woman from image 1, wearing the same outfit, barefoot, in a tall, open finale stretch as described below.
+
+HOW TO USE THE REFERENCES:
+- Image 1: her body, hair and outfit only.
+- Image 2: the exact construction of the garments only.
+- Image 3: her face, plus the lighting, camera angle, background and colour grade of the series only.
+- IGNORE THE POSES in images 1, 2 and 3 completely. Do not copy, mirror or adapt any of them. She is standing with both arms raised overhead, as described below.
+
+THE WOMAN (face identical to image 3, body and hair as in image 1):
+- Same face, features, skin tone and eyes as image 3: early 20s, fair skin, natural no-makeup look. Expression calm, unsmiling, proud and confident, lips relaxed and closed. Not smiling.
+- Same long straight auburn-brown hair with a centre part, falling behind her shoulders, a few strands lifted by a light breeze.
+- Same curvy body shape and proportions.
+
+THE OUTFIT (do not change):
+- Top: the close-fitting short-sleeve T-shirt from image 2 in a deep soft black (about #262429), smooth matte cotton-modal stretch jersey, low wide scoop neckline with a narrow self-fabric binding, short set-in sleeves ending at the upper arm, hip length, worn untucked. With her arms raised, the hem lifts only slightly and still meets the top of the leggings' waistband.
+- Bottoms: the matching high-rise capri leggings in the same black jersey, flat waistband, slim legs ending at mid-calf with coverstitched hems.
+- Top and bottoms exactly the same black, a lifted matte black, not crushed: the binding, seams and hems stay visible. No new seams, logos or details.
+- Barefoot. No shoes, no socks, no jewellery.
+
+POSE — finale stretch:
+- Standing tall, facing the camera, square to the lens.
+- Feet planted wide, a little more than shoulder-width apart, both feet flat, toes turned slightly out, legs straight and strong.
+- Both arms raised straight overhead, elbows softly extended; her right hand loosely holding her left wrist above her head, fingers relaxed and natural.
+- A gentle arch through the upper back, chest open and lifted, so the T-shirt's neckline, sleeves and fit are fully visible.
+- Chin lifted slightly, eyes looking down into the lens.
+- Natural, anatomically correct hands, wrists and feet.
+
+CAMERA AND LIGHT (identical for the whole series):
+- Vertical 9:16 frame, her whole body including her raised hands in the frame, nothing cropped, centred horizontally.
+- Framing for this pose: her raised hands at about 4% from the top edge and the soles of her feet at about 94% from the top edge.
+- Camera at knee height, tilted slightly upward, 85mm lens look, no wide-angle distortion.
+- Soft diffused daylight, as outdoors on a bright overcast day: light coming gently from above and slightly front-left, soft shadows, no hard shadows, no rim light.
+- Photorealistic high-fashion editorial photography, true-to-life colour, fine film grain, sharp focus from head to toe.
+
+BACKGROUND:
+- Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
+
+DO NOT: copy any pose from the reference images, crop her hands or feet, change her face from image 3, make her smile, change the garments' colour or shape, expose her stomach, add shoes, socks, jewellery, logos, text or props.
 ```
