@@ -20,6 +20,9 @@ const FPS = +opt('--fps', 30), SUB = +opt('--sub', 8), DUR = +opt('--dur', 9.6);
 const OUT = opt('--out', 'campaign/part2/lookbook.mp4');
 const ASSETS = resolve('campaign/part2/assets');
 const STILLS = opt('--stills');
+// fraction of the frame interval the virtual shutter stays open: 0.5 is the
+// film-standard 180-degree shutter (crisper than a full-frame smear)
+const SHUTTER = +opt('--shutter', 0.5);
 
 const manifest = JSON.parse(readFileSync(join(ASSETS, 'manifest.json'), 'utf8'));
 const browser = await launch();
@@ -45,7 +48,7 @@ if (STILLS) {
   // frame 0 is sampled exactly at t=0 so it matches part 1's last frame
   for (let i = 0; i < total; i++) {
     const f = Math.floor(i / SUB);
-    const t = f === 0 ? 0 : (f + ((i % SUB) + 0.5) / SUB - 0.5) / FPS;
+    const t = f === 0 ? 0 : (f + (((i % SUB) + 0.5) / SUB - 0.5) * SHUTTER) / FPS;
     await page.evaluate(tt => window.setTime(tt), t);
     await page.screenshot({ path: join(sub, `s_${String(i).padStart(6, '0')}.jpg`),
                             type: 'jpeg', quality: 95, animations: 'disabled' });

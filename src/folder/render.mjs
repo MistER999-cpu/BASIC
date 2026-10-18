@@ -19,6 +19,9 @@ const FPS = +opt('--fps', 30), SUB = +opt('--sub', 8), DUR = +opt('--dur', 5.0);
 const OUT = opt('--out', 'campaign/folder/folder-burst.mp4');
 const ASSETS = resolve('campaign/folder/assets');
 const STILLS = opt('--stills');
+// fraction of the frame interval the virtual shutter stays open: 0.5 is the
+// film-standard 180-degree shutter (crisper than a full-frame smear)
+const SHUTTER = +opt('--shutter', 0.5);
 
 const manifest = JSON.parse(readFileSync(join(ASSETS, 'manifest.json'), 'utf8'));
 const browser = await launch();
@@ -41,7 +44,7 @@ if (STILLS) {
   const total = Math.round(DUR * FPS) * SUB;
   // centre each frame's subframes on its timestamp so the blur is not lagged
   for (let i = 0; i < total; i++) {
-    const t = (Math.floor(i / SUB) + ((i % SUB) + 0.5) / SUB - 0.5) / FPS;
+    const t = (Math.floor(i / SUB) + (((i % SUB) + 0.5) / SUB - 0.5) * SHUTTER) / FPS;
     await page.evaluate(tt => window.setTime(tt), t);
     await page.screenshot({ path: join(sub, `s_${String(i).padStart(6, '0')}.jpg`),
                             type: 'jpeg', quality: 95, animations: 'disabled' });
