@@ -2,3 +2,5 @@ node_modules/
 out/
 assets/base/*
 !assets/base/.gitkeep
+__pycache__/
+*.pyc
