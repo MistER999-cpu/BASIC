@@ -6,8 +6,8 @@ they cut out cleanly and line up as one row in the meadow.
 
 | # | Item | Colour | Model | Pose | Silhouette | Status |
 |---|---|---|---|---|---|---|
-| 1 | Tank | Beige | A | S-curve contrapposto, arm behind head, thumb in waistband | Tall | Prompt ready |
-| 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | |
+| 1 | Tank | Beige | A | S-curve contrapposto, arm behind head, thumb in waistband | Tall | Approved (file not yet received) |
+| 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Prompt ready |
 | 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | |
 | 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | |
 | 5 | Cami set | White | A | Street-editorial crouch, forearms on knees | Lowest | |
@@ -58,4 +58,44 @@ BACKGROUND:
 - Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
 
 DO NOT: change her face or hair, change the tank's colour or shape, cover the tank with her arms, add shoes, socks, jewellery, a belt, logos, text or props, or crop any part of her body.
+```
+
+## Figure 2 — Model B, tee set, white, runway crossover step
+
+Attach: image 1 `looks/set-2/3-white-model-b.jpg`, image 2 `flatlays/set-2/white.jpg`,
+image 3 the approved figure 1 (series match: light, angle, scale, grade).
+
+```
+Using image 1 as the reference, create a full-length, head-to-toe high-fashion editorial photograph of the same woman wearing the same outfit, barefoot, caught mid-stride in a runway walk. Image 2 shows the exact garments; match them precisely. Image 3 is another photo from the same series: match its lighting, camera angle, scale, background and colour grade exactly.
+
+THE WOMAN (keep identical to image 1):
+- Same face, features, skin tone and eyes: early 20s, fair skin, natural no-makeup look. Expression calm, unsmiling, quietly confident, lips relaxed and closed, eyes on the lens.
+- Same long straight auburn-brown hair with a centre part, the lengths lifting and swinging slightly with the movement of the walk.
+- Same curvy body shape and proportions.
+
+THE OUTFIT (do not change):
+- Top: the close-fitting short-sleeve T-shirt from image 2 in soft clean white, smooth matte cotton-modal stretch jersey, low wide scoop neckline with a narrow self-fabric binding, short set-in sleeves ending at the upper arm, hip length, worn untucked over the leggings.
+- Bottoms: the matching high-rise capri leggings in the same white jersey, flat waistband, slim legs ending at mid-calf with coverstitched hems.
+- Top and bottoms exactly the same white. No new seams, logos, prints or details.
+- Barefoot. No shoes, no socks, no jewellery.
+
+POSE — runway crossover step:
+- Walking toward the camera, body angled about 10 degrees toward frame-left, caught at the exact moment of the step.
+- Left leg stepping forward and crossing slightly in front of the right, left foot landing flat; right leg behind with the heel lifted and only the toes touching the ground.
+- Hips swinging naturally with the step, torso upright, shoulders back and relaxed.
+- Right arm swinging forward with a soft bend at the elbow, left arm swinging back, both hands relaxed with fingers gently curled.
+- The T-shirt's neckline, sleeves and fit and the leggings' length fully visible.
+- Natural, anatomically correct hands and feet.
+
+CAMERA AND LIGHT (identical for the whole series):
+- Vertical 9:16 frame, full length, head to toe, nothing cropped, centred horizontally.
+- Scale: frame her as if she stood fully upright with the top of her head at about 6% from the top edge and the soles of her feet at about 92% from the top edge. Do not zoom in or out for the pose.
+- Camera at knee height, tilted slightly upward, 85mm lens look, no wide-angle distortion.
+- Soft diffused daylight, as outdoors on a bright overcast day: light coming gently from above and slightly front-left, soft shadows, no hard shadows, no rim light.
+- Photorealistic high-fashion editorial photography, true-to-life colour, fine film grain, sharp focus from head to toe, no motion blur.
+
+BACKGROUND:
+- Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
+
+DO NOT: change her face or hair colour, change the garments' colour or shape, tuck the T-shirt in, add shoes, socks, jewellery, logos, text or props, add motion blur, or crop any part of her body.
 ```
