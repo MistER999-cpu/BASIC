@@ -94,6 +94,33 @@ def fit_backdrop(im, ring=48):
     return out
 
 
+def enclosed_backdrop(dist, mask, seed_tol=8.0, min_seed=100):
+    """Backdrop showing through a gap the garment closes around.
+
+    Closing and fill_holes are what keep a pale colourway from being carved
+    open, but they also fill every enclosed gap, such as the inside of a cami's
+    strap loops. Bare backdrop sits within about 2 of the fitted surface, while
+    garment pixels almost never drop below 8, so seed on that and grow outward
+    through the shadowed rim of the gap - only as far as the garment's own
+    contrast allows, so a pale colourway keeps its shading.
+
+    The shadowed top of a slot between two legs never gets that close to the
+    backdrop and is not caught here.
+    """
+    fine = ndimage.gaussian_filter(dist, 2.0)
+    seeds = mask & (fine < seed_tol)
+    lbl, n = ndimage.label(seeds)
+    if n == 0:
+        return np.zeros_like(mask)
+    sizes = ndimage.sum(seeds, lbl, range(1, n + 1))
+    seeds = np.isin(lbl, 1 + np.flatnonzero(sizes >= min_seed))
+    if not seeds.any():
+        return seeds
+    grow_tol = float(np.clip(0.35 * np.median(fine[mask]), seed_tol, 30.0))
+    lbl, _ = ndimage.label(mask & (fine < grow_tol))
+    return np.isin(lbl, np.unique(lbl[seeds]))
+
+
 def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     w, h = probe(src)
     im = read_rgb(src, w, h)
@@ -123,6 +150,7 @@ def matte(src, tol_lo=10.0, tol_hi=34.0, feather=1.4):
     # garment and keeps a grey halo. Pull it back onto the real boundary.
     coarse = ndimage.binary_erosion(coarse, np.ones((3, 3)),
                                     iterations=int(round(sigma)))
+    coarse &= ~enclosed_backdrop(dist, coarse)
 
     # solid interior, soft ramp only in a thin band at the silhouette edge
     band = max(2, int(round(0.0015 * max(w, h))))

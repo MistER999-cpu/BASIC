@@ -204,7 +204,7 @@ and black recoloured from them.
 |---|---|---|
 | Tank | Approved | [`flatlays/tank/`](flatlays/tank) — white, beige, brown, black |
 | Set 1 | Approved, colour fix in post | [`flatlays/set-1/`](flatlays/set-1) — white, beige, black |
-| Set 2 | Pending | |
+| Set 2 | Approved, colour fix in post | [`flatlays/set-2/`](flatlays/set-2) — white, beige, black |
 
 Set 1 review (measured with `tools/cutout.py`):
 
@@ -219,6 +219,17 @@ Set 1 review (measured with `tools/cutout.py`):
   with a per-channel gain at cut-out time — no regeneration needed.
 - Cami hem sits just above the waistband rather than overlapping it. Reads as
   one outfit; consistent across all three, so kept.
-- Cut-out: the backdrop showing through the strap loops and the gap between the
-  legs is enclosed, so the current matte fills it in. Needs fixing in the
-  cut-out step before these go into the animation.
+- Cut-out: strap loops fixed in `tools/cutout.py` (enclosed backdrop is now
+  cleared; tank mattes unchanged pixel for pixel). The shadowed top of the slot
+  between the legs still keeps a small sliver — touch up by hand only if it
+  shows at folder size.
+
+Set 2 review:
+
+- Scoop neck with binding, short sleeves, slim shaped body, mid-calf leggings —
+  matches the model photos. No centre-front seam on the leggings (the model
+  photos have one); invisible at folder size.
+- Alignment across colours 96–98%; framing 7–94% of height, same as the rest.
+- Beige `#B38C79` against a `#B68F7C` target — on target.
+- White `#E3DBDA` and black `#373033` have the same drift as set 1 and get the
+  same correction to the tank values.
