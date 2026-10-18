@@ -194,3 +194,31 @@ Open points:
 - Final folder contents
 - CTA wording, if any
 - Logo as SVG or a larger PNG
+
+## Flat-lays (for the folder burst)
+
+Prompts: [`prompts/flatlays.md`](prompts/flatlays.md). Masters in beige, white
+and black recoloured from them.
+
+| Item | Status | Files |
+|---|---|---|
+| Tank | Approved | [`flatlays/tank/`](flatlays/tank) — white, beige, brown, black |
+| Set 1 | Approved, colour fix in post | [`flatlays/set-1/`](flatlays/set-1) — white, beige, black |
+| Set 2 | Pending | |
+
+Set 1 review (measured with `tools/cutout.py`):
+
+- Construction matches the model photos: thin straps, shallow V neckline,
+  straight cropped hem, flat waistband, centre-front seam, mid-thigh length.
+- Alignment across the three colours: silhouette overlap 95–98%, tighter than
+  the tank set (95%). The recolour method worked.
+- Framing matches the tanks: garment spans 7–94% of frame height (tanks 8–93%).
+- Beige `#D3B1A0` against a `#D8B5A2` target — on target.
+- White `#E5DADD` is dimmer and pinker than the tank's `#EEE8EC`; black
+  `#383036` reads charcoal next to the tank's `#262429`. Both corrected in post
+  with a per-channel gain at cut-out time — no regeneration needed.
+- Cami hem sits just above the waistband rather than overlapping it. Reads as
+  one outfit; consistent across all three, so kept.
+- Cut-out: the backdrop showing through the strap loops and the gap between the
+  legs is enclosed, so the current matte fills it in. Needs fixing in the
+  cut-out step before these go into the animation.
