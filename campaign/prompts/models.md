@@ -11,7 +11,7 @@ they cut out cleanly and line up as one row in the meadow.
 | 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Approved (file not yet received) |
 | 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | Approved (file not yet received) |
 | 5 | Cami set | White | A | Seated on the ground, leaning back on one hand, one knee up (replaces the crouch) | Lowest | Approved (file not yet received) |
-| 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | Prompt ready |
+| 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | Approved (file not yet received) |
 
 Rules for the series:
 
