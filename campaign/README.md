@@ -4,7 +4,7 @@ Analysis and source material for the BASIC video. Generation tools: Nano Banana
 2.1 (images) and Omni 1.1 Flash (video). No prompts yet — this file holds what
 we know, so the prompt pack can be written once all outfit sets are in.
 
-**Status:** tank and set 1 in; waiting for set 2.
+**Status:** tank, set 1 and set 2 in. Analysis only — no prompts until asked.
 
 ## Brand
 
@@ -142,13 +142,54 @@ Open points:
 - Cool grey here vs warm taupe for the tank: once cut out this no longer
   matters, but the two sets were lit slightly differently (this one cooler).
 
-### Set 2
+### Set 2 — fitted tee + capri leggings
 
-_Pending._
+Matching two-piece in the same matte cotton-stretch jersey: close-fitting
+short-sleeve tee with a low scoop/crew neck and narrow binding, hip length;
+high-rise capri leggings ending mid-calf, centre-front seam, flat waistband.
+Three colourways: white, beige, black. Same two models as set 1.
+
+Same shoot setup as set 1: full length, barefoot, flat cool light-grey
+backdrop, soft smile, weight on one leg with feet lightly crossed. The two
+black looks are the exception — feet planted apart, a slightly squarer stance.
+
+| File | Colour | Model |
+|---|---|---|
+| [`1-white-model-a.jpg`](looks/set-2/1-white-model-a.jpg) | White | A |
+| [`2-black-model-a.jpg`](looks/set-2/2-black-model-a.jpg) | Black | A |
+| [`3-white-model-b.jpg`](looks/set-2/3-white-model-b.jpg) | White | B |
+| [`4-beige-model-b.jpg`](looks/set-2/4-beige-model-b.jpg) | Beige | B |
+| [`5-black-model-b.jpg`](looks/set-2/5-black-model-b.jpg) | Black | B |
+
+Open points:
+
+- No beige on Model A — the mirror of set 1, where Model B has no white.
+- Beige here reads deeper and more mocha/taupe than set 1's nude beige. Same
+  dye on screen or two different shades? Decide before they sit side by side.
+- Waistbands and hems are consistent across all five.
+- White against the grey backdrop is again the weakest cut-out edge.
+
+## Across all three items
+
+| | White / cream | Beige | Brown | Black |
+|---|---|---|---|---|
+| Tank (tank model) | ✓ cream | ✓ | ✓ | ✓ |
+| Set 1 — Model A | ✓ | ✓ | | ✓ |
+| Set 1 — Model B | | ✓ | | ✓ |
+| Set 2 — Model A | ✓ | | | ✓ |
+| Set 2 — Model B | ✓ | ✓ | | ✓ |
+
+- 14 looks in total. Brown exists only in the tank.
+- Two shoots: the tank on warm taupe, cropped at mid-thigh, styled with real
+  trousers and shoes-to-be; sets 1 and 2 on cool grey, full length, barefoot,
+  matching two-pieces. They will need one shared rule (shoes, framing, grade)
+  to sit in the same video.
+- Every look uses essentially the same front-on pose.
+- Beige varies across items: tank, set 1 and set 2 each read as a slightly
+  different shade.
 
 ## Still needed
 
-- Outfit set 2
 - Music track (all timing goes on its beats)
 - Final folder contents
 - CTA wording, if any
