@@ -10,7 +10,7 @@ they cut out cleanly and line up as one row in the meadow.
 | 2 | Tee set | White | B | Runway crossover step, mid-stride, hair lifting | Tall, wide | Approved (file not yet received) |
 | 3 | Tank | Brown | A | Winged lean: hands on lower back, elbows out, leaning to camera | Medium | Approved (file not yet received) |
 | 4 | Cami set | Beige | B | Wide lunge, hand on bent thigh, other hand in hair | Low, wide | Approved (file not yet received) |
-| 5 | Cami set | White | A | Street-editorial crouch, forearms on knees | Lowest | Prompt ready |
+| 5 | Cami set | White | A | Seated on the ground, leaning back on one hand, one knee up (replaces the crouch) | Lowest | Prompt ready (v2) |
 | 6 | Tee set | Black | B | Finale stretch: wide stance, arms overhead, wrist held (alt: mid-air jump) | Tallest | |
 
 Rules for the series:
@@ -21,6 +21,8 @@ Rules for the series:
   camera never zooms for a pose, so a crouch really is smaller in the row.
 - Camera at knee height, tilted slightly up; the meadow is generated to match.
 - Barefoot, light breeze in the hair, calm unsmiling expression.
+- Nano Banana copies poses from reference images: every prompt says which
+  reference is for what and to ignore their poses (learned on figure 5).
 
 ## Figure 1 — Model A, tank, beige, S-curve contrapposto
 
@@ -183,17 +185,27 @@ BACKGROUND:
 DO NOT: change her face or hair colour, change the garments' colour or shape, lengthen the shorts or the camisole, cover the camisole with her arms, add shoes, socks, jewellery, logos, text or props, or crop any part of her body.
 ```
 
-## Figure 5 — Model A, cami set, white, street-editorial crouch
+## Figure 5 — Model A, cami set, white, seated (v2)
+
+v1 (crouch) came back in the same pose as the previous figure: the reference
+images pulled the pose. v2 switches to a seated pose and tells the model to
+ignore every reference's pose. Fallback: generate without image 3, then
+face-match with an edit.
 
 Attach: image 1 `looks/set-1/1-white-model-a.jpg`, image 2 `flatlays/set-1/white.jpg`,
-image 3 the approved figure 1 (face lock: the set photos show her smiling and
-slightly different; plus series match).
+image 3 the approved figure 1.
 
 ```
-Using image 1 as the reference, create a full-length, head-to-toe high-fashion editorial photograph of the same woman wearing the same outfit, barefoot, in a low street-editorial crouch. Image 2 shows the exact garments; match their construction precisely. Image 3 is the same woman in another photo from the same series: keep her face identical to image 3, and match its lighting, camera angle, scale, background and colour grade exactly.
+Create a NEW full-length, head-to-toe high-fashion editorial photograph of the woman from image 1, wearing the same outfit, barefoot, SEATED ON THE GROUND in the pose described below.
+
+HOW TO USE THE REFERENCES:
+- Image 1: her body, hair and outfit only.
+- Image 2: the exact construction of the garments only.
+- Image 3: her face, plus the lighting, camera angle, scale, background and colour grade of the series only.
+- IGNORE THE POSES in images 1, 2 and 3 completely. Do not copy, mirror or adapt any of them. She is sitting on the ground, as described below.
 
 THE WOMAN (face identical to image 3, body and hair as in image 1):
-- Same face, features, skin tone and eyes as image 3: early 20s, warm olive skin, brown eyes, natural no-makeup look. Expression calm, unsmiling, intense, lips relaxed and closed. Not smiling.
+- Same face, features, skin tone and eyes as image 3: early 20s, warm olive skin, brown eyes, natural no-makeup look. Expression calm, unsmiling, quietly confident, lips relaxed and closed. Not smiling.
 - Same shoulder-length dark brown curly hair with a centre part, same volume and curl pattern, a few curls lifted by a light breeze.
 - Same body shape and proportions.
 
@@ -203,17 +215,18 @@ THE OUTFIT (do not change):
 - Top and bottoms exactly the same white, with the binding, seams and hems clearly visible, not blown out. No new seams, logos or details.
 - Barefoot. No shoes, no socks, no jewellery.
 
-POSE — street-editorial crouch:
-- Facing the camera, square to the lens, in a deep low squat on the balls of both feet, heels lifted off the ground, toes visible.
-- Knees wide apart, pointing diagonally out to each side.
-- Forearms resting on top of her knees, wrists relaxed, both hands hanging loosely in the space between her knees, fingers soft and slightly curled.
-- Back long and straight, torso upright with a slight forward lean, shoulders relaxed and open so the camisole's neckline, straps and fit are fully visible and not covered by her arms.
-- Head level, eyes staring straight into the lens.
+POSE — seated, leaning back:
+- Sitting directly on the ground, facing the camera, her body angled about 20 degrees to frame-right.
+- Leaning back on her straight left arm, left hand planted flat on the ground behind her hip, fingers pointing away from her body.
+- Right knee raised and bent, right foot flat on the ground close to her body; left leg extended long and straight toward frame-left, left foot relaxed with toes gently pointed.
+- Right forearm resting loosely across the top of the raised right knee, wrist relaxed, hand hanging softly past the knee.
+- Torso long, chest open and lifted, so the camisole's neckline, straps and fit are fully visible and not covered by her arms.
+- Head tilted slightly toward her right shoulder, eyes looking straight into the lens.
 - Natural, anatomically correct hands and feet.
 
 CAMERA AND LIGHT (identical for the whole series):
-- Vertical 9:16 frame, full length, head to toe, nothing cropped, centred horizontally.
-- Scale: frame her as if she stood fully upright with the top of her head at about 6% from the top edge and the soles of her feet at about 92% from the top edge. Do not zoom in or out for the pose: crouching, she occupies only the lower half of the frame, with her feet still at about 92%.
+- Vertical 9:16 frame, her whole body in the frame, nothing cropped, centred horizontally.
+- Scale: the same as a standing figure whose head is at about 6% from the top edge and whose soles are at about 92%. Do not zoom in for this pose: seated, she occupies only the lower part of the frame, with the ground line at about 92% from the top edge.
 - Camera at knee height, tilted slightly upward, 85mm lens look, no wide-angle distortion.
 - Soft diffused daylight, as outdoors on a bright overcast day: light coming gently from above and slightly front-left, soft shadows, no hard shadows, no rim light.
 - Photorealistic high-fashion editorial photography, true-to-life colour, fine film grain, sharp focus from head to toe.
@@ -221,5 +234,5 @@ CAMERA AND LIGHT (identical for the whole series):
 BACKGROUND:
 - Plain seamless flat mid-grey (#8C8C8C), evenly lit, no gradient, no floor line, no floor shadow, nothing else in the frame.
 
-DO NOT: change her face from image 3, make her smile, change the garments' colour or shape, lengthen the shorts or the camisole, cover the camisole with her arms, sit her down on the floor, add shoes, socks, jewellery, logos, text or props, zoom in, or crop any part of her body.
+DO NOT: copy any pose from the reference images, have her stand, lunge or squat, change her face from image 3, make her smile, change the garments' colour or shape, cover the camisole with her arms, add shoes, socks, jewellery, logos, text or props, zoom in, or crop any part of her body.
 ```
