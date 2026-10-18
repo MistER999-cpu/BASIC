@@ -74,11 +74,11 @@ const T = {
 const NAME = 'Les BASIC’s';
 const FLAP_DEG = -36;
 
-const BIG   = { cx: 540, cy: 905, w: 720 };   // hook framing
-const SMALL = { cx: 540, cy: 405, w: 400 };   // after it makes room for the grid
-const ICON_H = 240, ICON_W = 210;
-const ROWS = [765, 1075, 1385];
-const COLS = { 4: [150, 410, 670, 930], 3: [280, 540, 800] };
+const BIG   = { cx: 540, cy: 800, w: 720 };   // hook framing, name clear of the caption zone
+const SMALL = { cx: 540, cy: 455, w: 360 };   // after it makes room for the grid
+const ICON_H = 210, ICON_W = 190;   // kept inside Instagram's Reels safe zone
+const ROWS = [745, 970, 1195];
+const COLS = { 4: [165, 405, 645, 885], 3: [300, 540, 780] };
 
 const ITEMS = [
   ['tank_white', 'tank_beige', 'tank_brown', 'tank_black'],
@@ -151,8 +151,8 @@ const SMALL_S = SMALL.w / 811;
 
 /* ---- cursor -------------------------------------------------------------- */
 const CURSOR = [ // t, x, y (hotspot)
-  [0.00, 900, 1500], [0.62, 552, 930], [0.95, 552, 930], [1.60, 870, 1640],
-  [T.qlMove[0], 870, 1640], [T.qlMove[1], 430, 800],
+  [0.00, 900, 1400], [0.62, 552, 825], [0.95, 552, 825], [1.60, 870, 1640],
+  [T.qlMove[0], 870, 1640], [T.qlMove[1], 425, 775],
 ];
 function cursorAt(t) {
   let p = CURSOR[0];

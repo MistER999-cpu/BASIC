@@ -1,0 +1,369 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Inter; font-weight: 400; src: url('file:///usr/share/fonts/opentype/inter/Inter-Regular.otf'); }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #F2F2F4; }
+  #stage { position: absolute; inset: 0; overflow: hidden; font-family: Inter, sans-serif; }
+  .layer { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
+  .el { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; }
+  .el img, img.el { display: block; }
+  #grassfront { -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 1728px, #000 1802px); }
+  .shadow { position: absolute; border-radius: 50%;
+            background: radial-gradient(closest-side, rgba(28,40,18,.42), rgba(28,40,18,0)); }
+  #plate { position: absolute; left: 0; top: 0; z-index: 30; }
+  #flatlay { position: absolute; left: 0; top: 0; z-index: 31; transform-origin: 0 0; }
+  #logo { position: absolute; z-index: 20; left: 0; top: 0; width: 720px; text-align: center; }
+  #logo img { display: block; width: 720px; }
+  #logo .rule { width: 49px; height: 3px; background: #111; margin: 37px auto 0; transform-origin: 50% 50%; }
+  #logo .ess { margin-top: 31px; font-size: 23px; color: #111; white-space: nowrap; display: inline-block; }
+  .bfly { position: absolute; left: 0; top: 0; z-index: 25; width: 0; height: 0; }
+  .bfly img { position: absolute; top: 0; }
+  #perch { position: absolute; z-index: 25; left: 0; top: 0; transform-origin: 50% 100%; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="meadowL" class="layer"></div>
+  <div id="far" class="layer"></div>
+  <div id="ground" class="layer"></div>
+  <div id="near" class="layer"></div>
+  <div id="drift" class="layer"></div>
+  <div id="logo"><img id="logoimg"><div class="rule"></div><span class="ess">ESSENTIALS</span></div>
+  <div class="bfly" id="bfly"><img class="wl"><img class="bd"><img class="wr"></div>
+  <img id="perch">
+  <canvas id="plate" width="1080" height="1920"></canvas>
+  <img id="flatlay">
+</div>
+<script>
+/* ---------------------------------------------------------------------------
+   Part 2: the lookbook slide. Everything is a pure function of t (seconds
+   from the cut out of part 1), so renders are reproducible frame for frame.
+--------------------------------------------------------------------------- */
+const W = 1080, H = 1920, CX = 540, CY = 960;
+const FIG_S = 0.92;                 // figure scale relative to its 9:16 frame
+const GROUND = 1800;                // where feet meet the grass
+const X = [600, 1160, 1700, 2420, 3270, 3870];   // figure centres on the meadow
+const LOGO_X = 4710, LOGO_Y = 640;  // logo top-centre on the meadow
+const DUR = 9.6;
+
+// camera: hold-and-drift on each figure, quick eased moves between them
+const CAM = [
+  [0.00, X[0] - 40], [1.25, X[0] + 30],
+  [1.85, X[1] - 30], [2.35, X[1] + 30],
+  [2.95, X[2] - 30], [3.45, X[2] + 30],
+  [4.10, X[3] - 30], [4.60, X[3] + 30],
+  [5.30, X[4] - 30], [5.80, X[4] + 30],
+  [6.40, X[5] - 30], [7.05, X[5] + 30],
+  [7.85, LOGO_X - 25], [DUR, LOGO_X + 10],
+];
+const BLOOM = [0.16, 0.82];         // part 1's Quick Look plate washes away
+const LAND = [0.0, 0.32];           // the flat-lay settles onto her tank
+const LOGO_IN = 7.55;               // wordmark reveal starts
+const PERCH_AT = 8.55;              // butterfly lands on the logo
+
+/* ---- helpers ------------------------------------------------------------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const inOut = u => u < .5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3) / 2;
+const outCubic = u => 1 - Math.pow(1 - u, 3);
+const outBack = (u, s = 1.7) => 1 + (s + 1) * Math.pow(u - 1, 3) + s * Math.pow(u - 1, 2);
+const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+
+// monotone cubic (Fritsch-Carlson): smooth velocity through the keys, no overshoot
+function monotone(keys) {
+  const n = keys.length, xs = keys.map(k => k[0]), ys = keys.map(k => k[1]);
+  const d = [], m = new Array(n);
+  for (let i = 0; i < n - 1; i++) d.push((ys[i+1] - ys[i]) / (xs[i+1] - xs[i]));
+  m[0] = d[0]; m[n-1] = d[n-2];
+  for (let i = 1; i < n - 1; i++) m[i] = d[i-1] * d[i] <= 0 ? 0 : 3 * (d[i-1] + d[i]) / (2 / 1) / 3;
+  for (let i = 1; i < n - 1; i++) if (d[i-1] * d[i] > 0) {
+    const w1 = 2 * (xs[i+1] - xs[i]) + (xs[i] - xs[i-1]), w2 = (xs[i+1] - xs[i]) + 2 * (xs[i] - xs[i-1]);
+    m[i] = (w1 + w2) / (w1 / d[i-1] + w2 / d[i]);
+  }
+  return t => {
+    if (t <= xs[0]) return ys[0];
+    if (t >= xs[n-1]) return ys[n-1];
+    let i = 0; while (t > xs[i+1]) i++;
+    const h = xs[i+1] - xs[i], u = (t - xs[i]) / h;
+    const h00 = 2*u*u*u - 3*u*u + 1, h10 = u*u*u - 2*u*u + u, h01 = -2*u*u*u + 3*u*u, h11 = u*u*u - u*u;
+    return h00*ys[i] + h10*h*m[i] + h01*ys[i+1] + h11*h*m[i+1];
+  };
+}
+const camX = monotone(CAM);
+const zoomAt = t => 1 + 0.07 * (1 - inOut(prog(t, 0.0, 1.3))) + 0.035 * inOut(prog(t, 7.7, DUR));
+
+// deterministic noise for the bloom edge and particle phases
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---- scene graph --------------------------------------------------------- */
+const $ = s => document.querySelector(s);
+const layers = { meadowL: { el: $('#meadowL'), k: 1 }, far: { el: $('#far'), k: 0.88 }, ground: { el: $('#ground'), k: 1 },
+                 near: { el: $('#near'), k: 1.22 }, drift: { el: $('#drift'), k: 1 } };
+let M, A, items = [], drifts = [], FIG1;
+const TANK1 = { x0: 565, x1: 1021, y0: 568, y1: 1174 };   // f1's tank in her native frame
+
+function add(layer, src, x, y, w, h, opts = {}) {
+  const el = document.createElement('img');
+  el.className = 'el'; el.src = A + src + '.png';
+  el.style.width = w + 'px'; el.style.height = h + 'px';
+  if (opts.z) el.style.zIndex = opts.z;
+  layers[layer].el.appendChild(el);
+  const it = { el, layer, x, y, w, h, flip: !!opts.flip, grow: opts.grow ?? null, sway: opts.sway ?? 0,
+               phase: rnd() * 6.28 };
+  items.push(it); return it;
+}
+// place a painting by its height, base centre at (x, baseY) in layer coordinates
+function plant(layer, src, x, baseY, h, opts) {
+  const m = M[src], w = m.w / m.h * h;
+  return add(layer, src, x - w / 2, baseY - h, w, h, opts);
+}
+// a painting whose layer position puts it at screen offset dx while the camera rests on figure i
+const at = (layer, i, dx) => X[i] * layers[layer].k + dx;
+
+window.build = async (manifest, assetBase) => {
+  M = manifest; A = assetBase;
+  const meadow = M.meadow;
+  for (const id of ['meadowimg', 'grassfront']) {
+    const el = document.createElement('img');
+    el.id = id; el.className = 'el'; el.src = A + 'meadow.jpg';
+    el.style.width = meadow.w + 'px'; el.style.height = meadow.h + 'px';
+    el.style.zIndex = id === 'meadowimg' ? 0 : 6;
+    $(id === 'meadowimg' ? '#meadowL' : '#ground').appendChild(el);
+  }
+
+  // far layer: Queen Anne's lace on the horizon between figures
+  plant('far', 'lace', at('far', 1, 300), 1560, 760, { z: 1, sway: 0.6 });
+  plant('far', 'lace', at('far', 3, 470), 1560, 820, { z: 1, sway: 0.6 });
+  plant('far', 'lace', LOGO_X * layers.far.k + 430, 1640, 760, { z: 1, sway: 0.5 });
+
+  // ground layer, behind the figures
+  plant('ground', 'pampas', X[0] + 255, 1830, 1180, { z: 2, grow: 0.25, sway: 0.9 });
+  const oak = M.oak, oh = 1480, ow = oak.w / oak.h * oh;
+  add('ground', 'oak', X[2] + 330 - ow / 2, 820 - oh / 2, ow, oh, { z: 2, grow: 2.55, sway: 0.5 });
+  plant('ground', 'dahlias', X[5] - 330, 1840, 1330, { z: 2, grow: 6.0, sway: 0.6 });
+  plant('ground', 'dahlias', X[5] + 300, 1840, 950, { z: 2, grow: 6.1, sway: 0.6, flip: true });
+
+  // figures
+  const SPEC = { f1: [0, 1], f2: [1, 1], f3: [2, 1], f4: [3, 1], f5: [4, 0.88], f6: [5, null] };
+  for (const [key, [i, sMul]] of Object.entries(SPEC)) {
+    const f = M[key], [FW, FH] = f.frame, [x0, y0] = f.box;
+    // f6 is framed with raised hands at the top, so match its head-to-sole length instead
+    // f6's raised arms frame her smaller; match her head-to-sole length to the
+    // standing figures (0.885 of the frame) but stop at 1.05 so her hands stay in frame
+    const mul = sMul ?? Math.min(1.05, 0.885 / ((f.feet - f.head) / FH));
+    const s = (H / FH) * FIG_S * mul;
+    const ground = key === 'f5' ? GROUND - 50 : GROUND;
+    const x = X[i] + (x0 - FW / 2) * s, y = ground - (f.feet - y0) * s;
+    const sh = document.createElement('div'); sh.className = 'shadow el';
+    const shw = f.w * s * (key === 'f5' ? 0.9 : 0.62);
+    Object.assign(sh.style, { width: shw + 'px', height: '46px', zIndex: 3 });
+    $('#ground').appendChild(sh);
+    items.push({ el: sh, layer: 'ground', x: X[i] - shw / 2, y: ground - 26, w: shw, h: 46,
+                 flip: false, grow: null, sway: 0, phase: 0 });
+    if (key === 'f1') FIG1 = { s, ground, feet: f.feet };
+    add('ground', key, x, y, f.w * s, f.h * s, { z: 4 });
+  }
+
+  // near layer, in front of everything on the ground (moves faster: closer to camera)
+  plant('near', 'grasses', at('near', 0, -360), 1975, 330, { z: 7, sway: 0.7 });
+  plant('near', 'callas', at('near', 1, -350), 2010, 860, { z: 7, grow: 1.40, sway: 1.1 });
+  plant('near', 'grasses', at('near', 2, 520), 1985, 360, { z: 7, sway: 0.7 });
+  plant('near', 'roses', at('near', 3, 150), 1960, 520, { z: 7, grow: 3.65, sway: 0.8 });
+  plant('near', 'cosmos', at('near', 4, 270), 1940, 440, { z: 7, grow: 4.85, sway: 0.9 });
+  plant('near', 'grasses', LOGO_X * layers.near.k - 420, 1990, 340, { z: 7, sway: 0.7, flip: true });
+  plant('near', 'grasses', LOGO_X * layers.near.k + 380, 1985, 320, { z: 7, sway: 0.7 });
+
+  // drifting seeds, leaves, wisp and petal: screen-space, own motion plus parallax
+  const DR = [ // piece, start screen x, y, size, parallax, vx, vy, spin, blur
+    [1, 1000, 330, 54, 0.55, -38, 12, 8, 0], [2, 120, 220, 50, 0.5, -30, 16, -10, 0],
+    [3, 900, 560, 48, 0.8, -55, 26, 40, 0], [5, 1150, 450, 62, 0.65, -44, 14, 14, 0],
+    [6, 760, 250, 40, 0.6, -36, 20, 30, 0], [3, 1550, 420, 46, 0.7, -50, 24, -28, 0],
+    [1, 1950, 560, 52, 0.58, -36, 12, 10, 0], [4, 2400, 300, 44, 0.72, -46, 22, 32, 0],
+    [6, 2950, 520, 38, 0.62, -34, 18, -26, 0], [2, 3350, 360, 50, 0.52, -30, 14, 12, 0],
+    [5, 3950, 260, 64, 0.66, -42, 12, -12, 0], [4, 4300, 420, 42, 0.7, -44, 18, 20, 0],
+    [3, 1350, 1560, 170, 1.55, -70, 14, 24, 5], [6, 2750, 1500, 150, 1.6, -60, 12, -20, 5],
+  ];
+  for (const [p, x, y, size, k, vx, vy, spin, blur] of DR) {
+    const m = M['drift' + p], el = document.createElement('img');
+    el.className = 'el'; el.src = A + 'drift' + p + '.png';
+    const w = size * Math.min(1, m.w / m.h), h = size * Math.min(1, m.h / m.w);
+    Object.assign(el.style, { width: w + 'px', height: h + 'px', transformOrigin: '50% 50%',
+      filter: blur ? `blur(${blur}px)` : 'none', opacity: blur ? 0.8 : 0.88, zIndex: blur ? 12 : 8 });
+    $('#drift').appendChild(el);
+    drifts.push({ el, x, y, w, h, k, vx, vy, spin, phase: rnd() * 6.28 });
+  }
+
+  // logo
+  $('#logoimg').src = A + 'logo_basic.png';
+  const ess = $('#logo .ess'), want = 0.59 * 720;
+  ess.style.letterSpacing = '0px';
+  await document.fonts.ready;
+  const base = ess.getBoundingClientRect().width, n = ess.textContent.length;
+  ess.style.letterSpacing = ((want - base) / n) + 'px';
+  ess.style.marginRight = (-(want - base) / n) + 'px';   // trailing tracking does not offset centring
+
+  // butterfly
+  const bf = M.bfly, BW = 130, s = BW / bf.w;
+  const wl = $('#bfly .wl'), bd = $('#bfly .bd'), wr = $('#bfly .wr');
+  wl.src = A + 'bfly_wing_l.png'; bd.src = A + 'bfly_body.png'; wr.src = A + 'bfly_wing_r.png';
+  const wlw = M.bfly_wing_l.w * s, wrw = M.bfly_wing_r.w * s, bdw = M.bfly_body.w * s, bh = bf.h * s;
+  Object.assign(wl.style, { width: wlw + 'px', height: bh + 'px', left: -bdw / 2 - wlw + 'px', top: -bh / 2 + 'px', transformOrigin: '100% 50%' });
+  Object.assign(wr.style, { width: wrw + 'px', height: bh + 'px', left: bdw / 2 + 'px', top: -bh / 2 + 'px', transformOrigin: '0% 50%' });
+  Object.assign(bd.style, { width: bdw + 'px', height: bh + 'px', left: -bdw / 2 + 'px', top: -bh / 2 + 'px' });
+  const pc = M.butterfly_closed, ph = 118;
+  Object.assign($('#perch').style, { width: pc.w / pc.h * ph + 'px', height: ph + 'px' });
+  $('#perch').src = A + 'butterfly_closed.png';
+
+  // part 1 hand-off: the Quick Look plate, exactly as part 1's last frame
+  const fl = M.ql_flatlay;
+  $('#flatlay').src = A + 'ql_flatlay.png';
+  Object.assign($('#flatlay').style, { width: fl.w + 'px', height: fl.h + 'px' });
+  buildBloom();
+
+  await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+};
+
+/* ---- the bloom: part 1's plate washes away like wet paint ---------------- */
+const BW_ = 270, BH_ = 480;          // quarter-resolution field
+let field, maskCv, maskCx, rimCv, rimCx;
+function buildBloom() {
+  // value noise, 4 octaves
+  const grid = (g) => { const a = new Float32Array((g + 1) * (g + 1)); for (let i = 0; i < a.length; i++) a[i] = rnd(); return a; };
+  const octs = [[6, 0.5], [12, 0.25], [24, 0.15], [48, 0.1]].map(([g, amp]) => ({ g, amp, v: grid(g) }));
+  const noise = (u, v) => {
+    let s = 0;
+    for (const o of octs) {
+      const x = u * o.g, y = v * o.g, xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+      const id = (a, b) => o.v[Math.min(o.g, b) * (o.g + 1) + Math.min(o.g, a)];
+      const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+      const top = lerp(id(xi, yi), id(xi + 1, yi), sx), bot = lerp(id(xi, yi + 1), id(xi + 1, yi + 1), sx);
+      s += o.amp * lerp(top, bot, sy);
+    }
+    return s;
+  };
+  field = new Float32Array(BW_ * BH_);
+  const tk = tankScreen(LAND[1]), cx = tk.x / W, cy = tk.y / H, maxd = Math.hypot(Math.max(cx, 1 - cx) * W, Math.max(cy, 1 - cy) * H);
+  for (let y = 0; y < BH_; y++) for (let x = 0; x < BW_; x++) {
+    const px = (x + .5) / BW_, py = (y + .5) / BH_;
+    const d = Math.hypot((px - cx) * W, (py - cy) * H) / maxd;
+    field[y * BW_ + x] = d + 0.22 * (noise(px, py * H / W) - 0.5);
+  }
+  maskCv = document.createElement('canvas'); maskCv.width = BW_; maskCv.height = BH_; maskCx = maskCv.getContext('2d');
+  rimCv = document.createElement('canvas'); rimCv.width = BW_; rimCv.height = BH_; rimCx = rimCv.getContext('2d');
+}
+function drawPlate(t) {
+  const plate = $('#plate'), fl = $('#flatlay');
+  const p = prog(t, BLOOM[0], BLOOM[1]);
+  if (p >= 1) { plate.style.display = 'none'; fl.style.display = 'none'; return; }
+  plate.style.display = 'block';
+  const g = plate.getContext('2d');
+  g.globalCompositeOperation = 'source-over';
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = '#F2F2F4'; g.fillRect(0, 0, W, H);
+  if (p > 0) {
+    const r = lerp(-0.08, 1.2, inOut(p) * 0.85 + p * 0.15);
+    const md = maskCx.createImageData(BW_, BH_), rd = rimCx.createImageData(BW_, BH_);
+    for (let i = 0; i < field.length; i++) {
+      const a = clamp((r - field[i]) / 0.045);
+      md.data[i * 4 + 3] = a * 255;
+      const rim = Math.max(0, 1 - Math.abs(r - 0.012 - field[i]) / 0.03);
+      rd.data[i * 4] = 205; rd.data[i * 4 + 1] = 176; rd.data[i * 4 + 2] = 156; rd.data[i * 4 + 3] = rim * 120;
+    }
+    maskCx.putImageData(md, 0, 0); rimCx.putImageData(rd, 0, 0);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(rimCv, 0, 0, W, H);                     // pigment collecting at the wet edge
+    g.globalCompositeOperation = 'destination-out';
+    g.drawImage(maskCv, 0, 0, W, H);
+  }
+  // the flat-lay lifts off the plate and settles onto her, fading into the real tank
+  const m = M.ql_flatlay, u = inOut(prog(t, LAND[0], LAND[1]));
+  const tk = tankScreen(t), ts = tk.w / m.w;
+  const s = lerp(1, ts, u), x = lerp(m.x, tk.x - m.w * ts / 2, u), y = lerp(m.y, tk.y - m.h * ts / 2, u);
+  fl.style.display = 'block';
+  fl.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+  fl.style.opacity = 1 - smooth(0.27, 0.46, t);    // dissolves into her tank as the wash uncovers it
+}
+
+// where f1's tank is on screen at time t (same maths as the layer transforms)
+function tankScreen(t) {
+  const z = zoomAt(t), cx = camX(t), s = FIG1.s;
+  const px = X[0] + ((TANK1.x0 + TANK1.x1) / 2 - 768) * s;
+  const py = FIG1.ground - (FIG1.feet - (TANK1.y0 + TANK1.y1) / 2) * s;
+  return { x: CX + z * (px - cx), y: CY + z * (py - CY), w: (TANK1.x1 - TANK1.x0) * s * z };
+}
+
+/* ---- one frame ----------------------------------------------------------- */
+window.setTime = t => {
+  const cx = camX(t), z = zoomAt(t);
+  for (const [name, L] of Object.entries(layers)) {
+    if (name === 'drift') continue;
+    L.el.style.transform = `translate(${CX}px,${CY}px) scale(${z}) translate(${-cx * L.k}px,${-CY}px)`;
+  }
+  for (const it of items) {
+    let sx = it.flip ? -1 : 1, sy = 1, rot = 0, op = 1;
+    if (it.grow !== null) {           // paintings bloom open as the camera arrives
+      const u = clamp((t - it.grow) / 0.55);
+      sy = lerp(0.82, 1, outBack(u, 1.4)); op = smooth(0, 0.35, u);
+      sx *= lerp(0.9, 1, outCubic(u));
+    }
+    if (it.sway) rot = it.sway * Math.sin(t * 1.4 + it.phase);
+    it.el.style.transform = `translate(${it.x}px,${it.y}px) rotate(${rot}deg) scale(${sx},${sy})`;
+    it.el.style.opacity = op;
+  }
+  for (const d of drifts) {
+    const x = d.x + d.vx * t + 14 * Math.sin(t * 1.1 + d.phase) - (cx - CAM[0][1]) * d.k * z;
+    const y = d.y + d.vy * t + 10 * Math.sin(t * 1.7 + d.phase);
+    d.el.style.transform = `translate(${x - d.w / 2}px,${y - d.h / 2}px) rotate(${d.spin * t + 20 * Math.sin(t + d.phase)}deg)`;
+  }
+
+  // logo, carried in on the meadow, then revealed
+  const lx = CX + z * (LOGO_X - cx), ly = CY + z * (LOGO_Y - CY);
+  const lu = prog(t, LOGO_IN, LOGO_IN + 0.75), eu = prog(t, LOGO_IN + 0.45, LOGO_IN + 1.1);
+  const logo = $('#logo');
+  logo.style.transform = `translate(${lx - 360 * z}px,${ly + 14 * (1 - outCubic(lu))}px) scale(${z})`;
+  logo.style.transformOrigin = '0 0';
+  logo.querySelector('img').style.clipPath = `inset(0 ${100 - 100 * inOut(lu)}% 0 0)`;
+  logo.querySelector('img').style.opacity = smooth(0, 0.25, lu);
+  logo.querySelector('.rule').style.transform = `scaleX(${outCubic(prog(t, LOGO_IN + 0.35, LOGO_IN + 0.8))})`;
+  const ess = logo.querySelector('.ess');
+  ess.style.opacity = smooth(0, 1, eu);
+  ess.style.transform = `translateY(${10 * (1 - outCubic(eu))}px)`;
+
+  // butterfly: crosses the sky mid-slide, then flies in and lands on the C of BASIC
+  const bf = $('#bfly'), perch = $('#perch');
+  let pos = null, heading = 0;
+  const fly = (u, pts) => {   // quadratic chain through 3 points + wobble
+    const [a, b, c] = pts, x = (1-u)*(1-u)*a[0] + 2*u*(1-u)*b[0] + u*u*c[0], y = (1-u)*(1-u)*a[1] + 2*u*(1-u)*b[1] + u*u*c[1];
+    const dx = 2*(1-u)*(b[0]-a[0]) + 2*u*(c[0]-b[0]), dy = 2*(1-u)*(b[1]-a[1]) + 2*u*(c[1]-b[1]);
+    return [x + 18 * Math.sin(u * 19), y + 26 * Math.sin(u * 13 + 1), Math.atan2(dy, dx)];
+  };
+  const landX = lx + z * 285, landY = ly + z * 8;      // top of the C
+  if (t > 2.6 && t < 4.9) {
+    const [x, y, hd] = fly(prog(t, 2.6, 4.9), [[1180, 700], [620, 260], [-120, 430]]); pos = [x, y]; heading = hd;
+  } else if (t > 6.7 && t < PERCH_AT) {
+    const [x, y, hd] = fly(inOut(prog(t, 6.7, PERCH_AT)), [[1180, 1100], [1000, 250], [landX, landY - 40]]);
+    pos = [x, y]; heading = hd;
+  }
+  if (pos) {
+    const beat = Math.abs(Math.cos(t * 2 * Math.PI * 7.5));
+    const near = t > 6.7 ? smooth(PERCH_AT - 0.35, PERCH_AT, t) : 0;     // glide in
+    const open = lerp(0.18 + 0.82 * beat, 0.25, near);
+    bf.style.display = 'block'; perch.style.display = 'none';
+    bf.style.transform = `translate(${pos[0]}px,${pos[1]}px) rotate(${heading * 180 / Math.PI + 90}deg)`;
+    bf.querySelector('.wl').style.transform = `scaleX(${open})`;
+    bf.querySelector('.wr').style.transform = `scaleX(${open})`;
+  } else if (t >= PERCH_AT) {
+    bf.style.display = 'none'; perch.style.display = 'block';
+    const pw = parseFloat(perch.style.width), ph = parseFloat(perch.style.height);
+    const settle = 1 + 0.06 * Math.exp(-6 * (t - PERCH_AT)) * Math.cos(18 * (t - PERCH_AT));
+    perch.style.transform = `translate(${landX - pw / 2}px,${landY - ph}px) scale(${settle},${2 - settle})`;
+  } else { bf.style.display = 'none'; perch.style.display = 'none'; }
+
+  drawPlate(t);
+};
+</script>
+</body>
+</html>
