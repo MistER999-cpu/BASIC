@@ -245,7 +245,7 @@ Set 2 review:
 | 0.66 / 0.86s | Click selects (blue Finder highlight), double-click opens |
 | 0.9–1.4s | Front flap tilts open on its hinge; folder glides up to make room |
 | 1.22 / 1.58 / 1.94s | Three waves out of the pocket: tank ×4, cami set ×3, tee set ×3 |
-| ~2.8s | All ten settled in a colour-sorted grid with filenames; flap closes |
+| ~2.8s | All ten settled in a colour-sorted grid; flap closes. "Les BASIC’s" is the only text on screen |
 | 3.36s | Cursor selects `tank_beige` |
 | 3.55–3.93s | Quick Look window springs open from the icon |
 | 4.25–4.70s | Quick Look expands to full screen — the handover to part 2 |

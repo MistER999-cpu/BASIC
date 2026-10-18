@@ -21,9 +21,6 @@
   .item { z-index: 2; }
   .item img { position: absolute; inset: 0; width: 100%; height: 100%; }
   .item .hl { position: absolute; inset: -14px -18px; border-radius: 18px; background: rgba(0,0,0,.08); opacity: 0; }
-  .item .cap { position: absolute; left: 50%; top: calc(100% + 14px); transform: translateX(-50%);
-               white-space: nowrap; font-size: 26px; font-weight: 500; color: #1D1D1F; }
-  .item .cap span { padding: 2px 8px; border-radius: 6px; }
   #dim { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 9; }
   #ql { z-index: 10; overflow: hidden; background: #F2F2F4; display: none;
         box-shadow: 0 40px 90px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.06); }
@@ -119,7 +116,7 @@ window.build = async (manifest, assetBase) => {
     const el = document.createElement('div');
     el.className = 'item abs';
     el.style.width = wd + 'px'; el.style.height = h + 'px';
-    el.innerHTML = `<div class="hl"></div><img src="${assetBase}${name}.png"><div class="cap"><span>${name}</span></div>`;
+    el.innerHTML = `<div class="hl"></div><img src="${assetBase}${name}.png">`;
     $('#stage').appendChild(el);
     const k = items.length;
     items.push({ el, name, w, i, wd, h,
@@ -131,7 +128,6 @@ window.build = async (manifest, assetBase) => {
 
   const q = M[QL_ITEM];
   $('#ql img').src = assetBase + QL_ITEM + '.png';
-  $('#ql .title').textContent = QL_ITEM;
 
   await document.fonts.ready;
   await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
@@ -227,17 +223,12 @@ window.setTime = t => {
     el.style.transform = `translate(${x - it.wd/2}px,${y - it.h/2}px) translate(${it.wd/2}px,${it.h/2}px) rotate(${rot}deg) scale(${sc}) translate(${-it.wd/2}px,${-it.h/2}px)`;
     el.querySelector('img').style.filter =
       `drop-shadow(0 ${4 + 26*lift}px ${6 + 22*lift}px rgba(0,0,0,${0.13 - 0.03*lift}))`;
-    const landed = clamp((dt - T.rise - T.fall * 0.8) / (T.fall * 0.3));
-    el.querySelector('.cap').style.opacity = landed;
   }
 
   // Quick Look on one piece
   const sel = items.find(i => i.name === QL_ITEM);
   const qSel = clamp((t - T.qlClick) / 0.05);
   sel.el.querySelector('.hl').style.opacity = qSel;
-  const cap = sel.el.querySelector('.cap span');
-  cap.style.background = qSel > .5 ? '#2563EB' : 'transparent';
-  cap.style.color = qSel > .5 ? '#fff' : '#1D1D1F';
 
   const qo = prog(t, T.qlOpen), qf = inOutCubic(prog(t, T.qlFull));
   const ql = $('#ql');
