@@ -4,9 +4,9 @@ from PIL import Image
 from keying import key_green, key_grey
 
 JOBS = [
-    ('M1_prune', 'assets/models/M1_prune.jpg', 'green', None),
+    ('M1_bordeaux', 'assets/models/M1_bordeaux.jpg', 'green', None),
     ('M2_noir',  'assets/models/M2_noir.jpg',  'grey',  1625),
-    ('M3_choco', 'assets/models/M3_choco.jpg', 'green', None),
+    ('M3_chocolat', 'assets/models/M3_chocolat.jpg', 'green', None),
 ]
 
 for name, src, kind, floor_y in JOBS:
