@@ -1,0 +1,6 @@
+build/
+out/
+__pycache__/
+# media stays local - generated model shots, ghost clips and the storm plate are
+# not published with the code; the third-party reference ad is never redistributed
+assets/
