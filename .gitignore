@@ -6,3 +6,4 @@ campaign/mockneck-set/audio/
 campaign/mockneck-set/exports/*music*
 campaign/mockneck-set/exports/basic-ad-video.mp4
 campaign/mockneck-set/exports/*.wav
+__pycache__/
