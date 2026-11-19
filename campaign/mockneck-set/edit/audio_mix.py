@@ -211,6 +211,9 @@ def build_sfx(n):
     # callout ticks
     for c_in in (T(11), T(22), T(28), T(41), T(51)):
         place(sfx, tick(), c_in + 0.05, -22)
+    # CTA engraving above the plaque
+    place(sfx, tick(), T(62) + 0.03, -20)
+    place(sfx, shimmer(0.9, 3900), T(62) + 0.02, -24)
     return sfx
 
 

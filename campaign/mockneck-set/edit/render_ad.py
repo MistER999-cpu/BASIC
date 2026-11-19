@@ -112,7 +112,7 @@ def zoom_blur(f, amount, n=6):
 
 # ------------------------------------------------------------------ events
 PUNCH = {0: 0.075, 1: 0.06, 2: 0.06, 3: 0.05, 10: 0.035, 15: 0.035, 27: 0.03, 32: 0.04, 50: 0.035}
-FLASH = {0: 0.85, 1: 0.42, 2: 0.42, 3: 0.32, 32: 0.12, 57: 0.16, 58: 0.16, 59: 0.16, 60: 0.30, 64: 0.10}
+FLASH = {0: 0.72, 1: 0.13, 2: 0.13, 3: 0.11, 32: 0.10, 57: 0.07, 58: 0.07, 59: 0.07, 60: 0.20, 64: 0.07}
 SHAKE = {0: 15.0, 60: 6.0}
 WHIPS = {21: ('S3', 'S4'), 40: ('S6', 'S7')}
 LEAK = {46: ('S7', 'S8')}
@@ -160,46 +160,40 @@ def apply_flash(f, v):
 # ------------------------------------------------------------------ text
 CREAM, INK = typo.CREAM, typo.INK
 CALLOUTS = [
-    typo.Callout('DOS ALLONGÉ · CHOCOLAT', "ourlet arrondi, plus long à l'arrière", (60, 1300),
-                 [(5.54, (300, 1255)), (6.31, (300, 1215)), (7.07, (320, 1210))], T(11), T(14.5)),
-    typo.Callout('COL MONTANT · NOIR', 'le détail signature', (520, 1236),
-                 [(10.34, (640, 1080)), (11.32, (610, 1095)), (12.30, (760, 1080))], T(22), T(26.5)),
-    typo.Callout('POCHES LATÉRALES · CHOCOLAT', 'discrètes, dans la couture', (60, 1384),
-                 [(12.95, (520, 1290)), (13.71, (565, 1185)), (14.48, (545, 1175))], T(28), T(31.5)),
+    typo.Callout('DOS ALLONGÉ · CHOCOLAT', 'ourlet arrondi, plus long à l\u2019arrière', (66, 860),
+                 [(5.54, (340, 1250)), (6.31, (345, 1208)), (7.07, (345, 1198))], T(11), T(14.4)),
+    typo.Callout('COL MONTANT · NOIR', 'le détail signature', (0, 1142),
+                 [(10.34, (640, 1080)), (11.32, (610, 1095)), (12.30, (760, 1080))], T(22), T(26.4)),
+    typo.Callout('POCHES LATÉRALES · CHOCOLAT', 'discrètes, dans la couture', (66, 780),
+                 [(12.95, (520, 1290)), (13.71, (565, 1185)), (14.48, (545, 1175))], T(28), T(31.4)),
     typo.Callout('MANCHES LARGES · NOIR', 'poignets ouverts', (280, 790),
                  [(18.62, (820, 1150)), (19.10, (720, 1180)), (19.49, (580, 1320))], T(41), T(43.1)),
     typo.Callout('JAMBE LARGE · BURGUNDY', 'taille haute, tombé fluide', (0, 958),
-                 [(22.97, (650, 1150)), (23.95, (640, 1180)), (24.93, (610, 1150))], T(51), T(55.5)),
+                 [(22.97, (650, 1150)), (23.95, (640, 1180)), (24.93, (610, 1150))], T(51), T(54.75)),
 ]
-CALLOUTS[4].lx = 1020 - CALLOUTS[4].bw
-PILLS = [typo.Pill('NOIR', (60, 1430), T(4.5), T(9.4)),
-         typo.Pill('BURGUNDY', (60, 1430), T(16), T(20.4)),
-         typo.Pill('BURGUNDY', (60, 1430), T(33), T(39.3)),
-         typo.Pill('CHOCOLAT', (60, 1430), T(46.6), T(49.5))]
+CALLOUTS[1].lx = 1004 - CALLOUTS[1].bw
+CALLOUTS[4].lx = 1004 - CALLOUTS[4].bw
+PILLS = [typo.Pill('NOIR', (66, 1186), T(4.5), T(9.4)),
+         typo.Pill('BURGUNDY', (66, 1186), T(16), T(19.9)),
+         typo.Pill('BURGUNDY', (66, 1186), T(33), T(38.8)),
+         typo.Pill('CHOCOLAT', (66, 1186), T(46.6), T(49.5))]
 
-TAG1, _, TPAD = typo.text_layer('Trois teintes.', 'didone_it', 60, CREAM, shadow=0.55, shadow_blur=8)
-TAG2, _, _ = typo.text_layer('Une seule allure.', 'didone_it', 60, CREAM, shadow=0.55, shadow_blur=8)
-TAG_Y = 196
-_gap = 22
-_w1 = TAG1.shape[1] - 2 * TPAD
-_w2 = TAG2.shape[1] - 2 * TPAD
-TAG_X1 = (W - (_w1 + _gap + _w2)) / 2
-TAG_X2 = TAG_X1 + _w1 + _gap
+TAG1, _, TPAD = typo.text_layer('Trois teintes.', 'didone_it', 46, CREAM, shadow=0.8, shadow_blur=13, pad=48)
+TAG2, _, _ = typo.text_layer('Une seule allure.', 'didone_it', 46, CREAM, shadow=0.8, shadow_blur=13, pad=48)
+TAG_Y = 298
+TAG_X1 = 70
+TAG_X2 = 1010 - (TAG2.shape[1] - 2 * TPAD)
 TAG_IN1, TAG_IN2, TAG_OUT = T(4), T(6), T(9.3)
-_gy = np.arange(H, dtype=np.float32)
-TOP_GRAD = np.clip(1 - _gy / 560.0, 0, 1) ** 1.6
 
 
 def draw_tagline(f, t):
     if t < TAG_IN1 or t > TAG_OUT + 0.45:
         return f
     out = 1 - np.clip((t - TAG_OUT) / 0.45, 0, 1)
-    g = ease_out((t - TAG_IN1) / 0.5) * out
-    f *= (1 - 0.40 * g * TOP_GRAD)[:, None, None]
     k1 = ease_out((t - TAG_IN1) / 0.55)
     k2 = ease_out((t - TAG_IN2) / 0.55)
-    typo.composite(f, TAG1, TAG_X1 - TPAD, TAG_Y - TPAD + (1 - k1) * 16, k1 * out)
-    typo.composite(f, TAG2, TAG_X2 - TPAD, TAG_Y - TPAD + (1 - k2) * 16, k2 * out)
+    typo.composite(f, TAG1, TAG_X1 - TPAD + (1 - k1) * -18, TAG_Y - TPAD, k1 * out)
+    typo.composite(f, TAG2, TAG_X2 - TPAD + (1 - k2) * 18, TAG_Y - TPAD, k2 * out)
     return f
 
 
@@ -223,9 +217,10 @@ END_T0 = T(WIPE_BEAT)
 def end_image(t):
     fig_k = [ease_out((t - T(57 + i) + 0.04) / 0.24) for i in range(3)]
     logo_k = ease_out((t - T(60)) / 0.30)
+    cta_k = ease_out((t - T(62)) / 0.40)
     shine = (t - T(64)) / 0.55
     shine_on = 0 <= shine <= 1
-    key = (tuple(round(k, 3) for k in fig_k), round(logo_k, 3), round(shine, 3) if shine_on else None)
+    key = (tuple(round(k, 3) for k in fig_k), round(logo_k, 3), round(cta_k, 3), round(shine, 3) if shine_on else None)
     if key in _END_CACHE:
         g = _END_CACHE[key]
     else:
@@ -234,6 +229,8 @@ def end_image(t):
             f = Cards.put_figure(f, layer, opacity=k, dy=(1 - k) * 26)
         if logo_k > 0:
             CARDS.plaque_logo(f, reveal=logo_k, shine=shine if shine_on else None)
+        if cta_k > 0:
+            CARDS.cta_line(f, reveal=cta_k)
         g = look.look(f)
         if len(_END_CACHE) < 400:
             _END_CACHE[key] = g
@@ -287,9 +284,10 @@ def light_leak(f_idx, beat, a_id, b_id, t):
     elif k > 2:
         base = shot_image(b_id, t)
     else:
-        m = (k + 3) / 6.0
+        m = float(np.clip((k + 1.5) / 3.0, 0, 1))
+        m = m * m * (3 - 2 * m)
         base = shot_image(a_id, t) * (1 - m) + shot_image(b_id, t) * m
-    inten = 0.9 * np.exp(-(k / 3.2) ** 2)
+    inten = 1.05 * np.exp(-(k / 3.0) ** 2)
     lay = leak_layer(k, inten)
     return 1 - (1 - base) * (1 - lay)
 

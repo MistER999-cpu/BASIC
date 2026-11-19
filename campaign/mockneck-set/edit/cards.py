@@ -88,10 +88,11 @@ class Cards:
         }
         self.word_basic = typo.text_alpha('BASIC  ESSENTIALS', 'sans_light', 17, tracking=9)
         self.labels = {
-            'burgundy': typo.text_layer('BURGUNDY', 'sans_med', 21, typo.INK, tracking=8)[0],
-            'chocolat': typo.text_layer('CHOCOLAT', 'sans_med', 21, typo.INK, tracking=8)[0],
-            'noir': typo.text_layer('NOIR', 'sans_med', 21, typo.INK, tracking=8)[0],
+            'burgundy': typo.text_layer('BURGUNDY', 'sans_med', 24, typo.INK, tracking=8)[0],
+            'chocolat': typo.text_layer('CHOCOLAT', 'sans_med', 24, typo.INK, tracking=8)[0],
+            'noir': typo.text_layer('NOIR', 'sans_med', 24, typo.INK, tracking=8)[0],
         }
+        self.cta = typo.text_alpha('DISPONIBLE MAINTENANT', 'sans_med', 23, tracking=11)
 
     @staticmethod
     def put_figure(frame, layer, opacity=1.0, dy=0.0):
@@ -129,6 +130,12 @@ class Cards:
             glow = (band * a)[..., None] * 0.55
             reg = frame[int(y):int(y) + h, int(x):int(x) + w]
             reg[:] = reg + (1 - reg) * glow
+        return frame
+
+    def cta_line(self, frame, reveal=1.0, y_centre=321):
+        a = self.cta
+        h, w = a.shape
+        typo.engrave(frame, self._reveal(a, reveal), W / 2 - w / 2, y_centre - h / 2, strength=0.92)
         return frame
 
     @staticmethod
