@@ -8,3 +8,4 @@ campaign/mockneck-set/exports/basic-ad-video.mp4
 campaign/mockneck-set/exports/*.wav
 __pycache__/
 campaign/mockneck-set/exports/
+campaign/mockneck-set/reference/
