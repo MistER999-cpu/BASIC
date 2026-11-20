@@ -89,4 +89,69 @@ NOIR['segments'] = [
          passout=(B(14.5), B(15))),
 ]
 
-PARTS = {'noir': NOIR}
+CHOCOLAT = dict(
+    name='chocolat',
+    number='02',
+    title='CHOCOLAT',
+    key=3,                                   # temp score transposed up a minor third
+    clips={
+        'C1': C + 'C1-chocolat-poses.mp4',
+        'C2': C + 'C2-chocolat-walkin.mp4',
+        'C3': C + 'C3-chocolat-plinth.mp4',
+        'C4': C + 'C4-chocolat-spin.mp4',
+        'C5': C + 'C5-chocolat-hem.mp4',
+        'C6': C + 'C6-chocolat-collar.mp4',
+    },
+    backdrop={'C1': (130, 113, 89), 'C2': (121, 106, 90), 'C3': (111, 91, 71),
+              'C4': (119, 102, 82), 'C5': (172, 142, 108), 'C6': (200, 179, 156)},
+    reference_backdrop=(131, 113, 90),       # Noir's wall, so the parts match
+    reference_clip='C1',
+    exposure={'C2': 1.0},
+    align={'C1': (0.97, (360, 1200))},        # onto the Noir master figure size
+    pivots={'neck': (375, 356), 'hip_right': (464, 705), 'upper': (360, 420), 'bottom': (360, 1280)},
+    pass_frames=[42, 44, 46, 48],
+    pass_clip='C1',
+    masthead=dict(src='C1', mask_dir='C1', baseline=356),
+    small_label=dict(align='right'),
+    end=268,
+    endlogo=(248, 268),
+)
+
+CHOCOLAT['segments'] = [
+    # 1. pass-by wipe into the slow-motion turn
+    dict(kind='clip', f0=0, f1=40, src='C4', s0=0, speed=0.6, zoom=(1.0, 1.06), pivot='upper',
+         passin=(0, 8), label=('small', CHOCOLAT['number'], CHOCOLAT['title'], 12, 36)),
+    # 2. pose flicks: front, stride, back, look back
+    flick(B(2) + 0, 'C1', 4),
+    flick(B(2) + 4, 'C1', 44),
+    flick(B(2) + 8, 'C1', 52),
+    flick(B(2) + 12, 'C1', 67),
+    # 3. hold: front into the power stance, masthead behind the hijab, dive to the hip
+    dict(kind='clip', f0=B(3), f1=B(5.5), src='C1', s0=8, speed=0.75, masthead=True, dive='hip_right'),
+    # 4. hem in silhouette
+    dict(kind='clip', f0=B(5.5), f1=B(7.25), src='C5', s0=0, speed=1.0, land=True,
+         label=('detail', 'DOS ALLONGÉ', 'ourlet arrondi, plus long à l\u2019arrière')),
+    # 5. flicks, last dives into the neck
+    flick(B(7.25) + 0, 'C1', 84),
+    flick(B(7.25) + 4, 'C1', 54),
+    flick(B(7.25) + 8, 'C1', 32, dive='neck'),
+    # 6. collar macro under the hijab
+    dict(kind='clip', f0=B(8), f1=B(10), src='C6', s0=8, speed=1.0, land=True,
+         label=('detail', 'COL MONTANT', 'sous le hijab, le détail signature')),
+    # 7. flicks
+    flick(B(10) + 0, 'C1', 70),
+    flick(B(10) + 4, 'C1', 88),
+    # 8. the plinth: sleeves fall open
+    dict(kind='clip', f0=B(10.5), f1=B(12), src='C3', s0=50, speed=1.0,
+         label=('detail', 'MANCHES LARGES', 'poignets ouverts, tombé ample')),
+    # 9. closing flicks
+    flick(B(12) + 0, 'C1', 30),
+    flick(B(12) + 4, 'C1', 50),
+    flick(B(12) + 8, 'C1', 80),
+    flick(B(12) + 12, 'C1', 12),
+    # 10. floor-level walk-in; her trouser leg wipes the lens into the logo
+    dict(kind='clip', f0=B(13), f1=B(15), src='C2', s0=62, speed=1.0, zoom=(1.09, 1.09), pivot='bottom',
+         whoosh_at=240),
+]
+
+PARTS = {'noir': NOIR, 'chocolat': CHOCOLAT}

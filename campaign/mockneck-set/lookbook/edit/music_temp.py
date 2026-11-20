@@ -33,8 +33,11 @@ def tb(b):
     return P.B(b) / FPS
 
 
+SHIFT = 0
+
+
 def midi(m):
-    return 440.0 * 2 ** ((m - 69) / 12)
+    return 440.0 * 2 ** ((m + SHIFT - 69) / 12)
 
 
 def place(buf, x, t, gain_db=0.0):
@@ -250,6 +253,9 @@ def design(n):
         if seg.get('masthead'):
             place(sfx, am.shimmer(1.3, 3000), t0 + 0.08, -20)
             place(sfx, am.impact(1.2, 60, 34, 0.35, click=False), t0, -13)
+        if seg.get('whoosh_at') is not None:
+            w, a = am.whoosh(0.30, 0.30, 160, 2800, pan_from=0.9, pan_to=-0.9)
+            place(sfx, w, seg['whoosh_at'] / FPS - a / SR, -5)
         for key in ('passin', 'passout'):
             if key in seg:
                 a0, a1 = seg[key]
@@ -273,6 +279,8 @@ def main():
     ap.add_argument('--sfx-only')
     a = ap.parse_args()
     PART = a.part
+    global SHIFT
+    SHIFT = P.PARTS[PART].get('key', 0)
     dur = P.PARTS[PART]['end'] / FPS
     n = int(round(dur * SR))
     mus = score(n)

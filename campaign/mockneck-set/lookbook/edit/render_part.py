@@ -107,7 +107,7 @@ class Part:
 
     def _corrections(self):
         bd = self.spec['backdrop']
-        ref = np.array(bd[self.spec['reference_clip']], np.float64)
+        ref = np.array(self.spec.get('reference_backdrop', bd[self.spec['reference_clip']]), np.float64)
         refL = ref @ LUMA
         tg, tb = ref[1] / ref[0], ref[2] / ref[0]
         out = {}
@@ -117,6 +117,7 @@ class Part:
             gG = (tg / (c[1] / c[0])) ** 0.7
             gB = (tb / (c[2] / c[0])) ** 0.7
             e = (refL / L) ** (0.5 if L < 150 else 0.3)
+            e = self.spec.get('exposure', {}).get(k, e)
             out[k] = np.array([e, e * gG, e * gB], np.float32)
         return out
 
@@ -158,8 +159,11 @@ class Part:
         em = target_w / (sum(widths) / 100 + track * (len(word) - 1))
         font = ImageFont.truetype(font_path, int(em))
         x = (W - target_w) / 2
+        bb = font.getbbox(word[0])
         cap_top = 196
-        bb = font.getbbox('N')
+        mh = self.spec.get('masthead', {})
+        if 'baseline' in mh:
+            cap_top = int(mh['baseline'] - (bb[3] - bb[1]))
         letters = []
         for ch in word:
             img = Image.new('L', (W, H), 0)
@@ -192,10 +196,13 @@ class Part:
         if a.max() <= 0:
             return base
         m = self.mask(spec['mask_dir'], s)
+        shadow = 0.0
         if m is not None:
-            mo = cv2.warpAffine(m, M[:2], (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            a *= (1 - np.clip(mo, 0, 1))
-        col = (np.array(CREAM, np.float32) / 255)[None, None, :] * self.mh_shade
+            mo = np.clip(cv2.warpAffine(m, M[:2], (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE), 0, 1)
+            a *= (1 - mo)
+            sh = cv2.GaussianBlur(cv2.warpAffine(mo, np.float32([[1, 0, 9], [0, 1, 4]]), (W, H)), (0, 0), 7)
+            shadow = (0.55 * sh)[..., None]
+        col = (np.array(CREAM, np.float32) / 255)[None, None, :] * self.mh_shade * (1 - shadow)
         return base * (1 - a[..., None]) + col * a[..., None]
 
     # ---------------------------------------------------------- pass-by
@@ -260,6 +267,8 @@ class Part:
         if kind == 'small':
             u = ease_out((f - t_in) / 6.0) * k_out
             y = 318
+            if self.spec.get('small_label', {}).get('align') == 'right':
+                x0 = W - 72 - (w1 + 18 + 46 + 18 + w2)
             dx = (1 - ease_out((f - t_in) / 6.0)) * -14
             typo.composite(frame, L1, x0 + dx - p1, y - p1, u)
             lx = x0 + w1 + 18
