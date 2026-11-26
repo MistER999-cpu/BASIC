@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""BASIC Essentials — « Se fondre dans l'hiver »: 15 s Instagram film, 1080x1920 @ 24 fps.
+"""BASIC Essentials — « Se fondre dans l'hiver »: Instagram film, 1080x1920 @ 24 fps, in a 20 s
+cut (default) and the original 15 s cut.
 
 Built on the structure of reference 3: a three-band split screen that fills on the beat with one
 script word per band, a walk-past wipe into full-screen shots, the rotated walking shot, the hip
-detail, then our two extra scenes (pocket, collar) and a frost end card with the logo.
+detail, then our extra scenes (boots, pocket, breath, collar) and a frost end card with the logo.
 Cut on the track's 70 BPM grid (beat 0 = first frame).
 
-    python3 campaign/mockneck-set/winter/edit/wedit.py --out film.mp4 [--audio mix.wav] [--stills 0,60,...]
+    python3 campaign/mockneck-set/winter/edit/wedit.py --cut 20 --out film.mp4 [--audio mix.wav] [--stills 0,60,...]
 """
 import os
 import sys
 import argparse
 import subprocess
+from types import SimpleNamespace
 import numpy as np
 import cv2
 
@@ -31,35 +33,75 @@ def B(b):
     return int(round(b * FPB))
 
 
-N_FRAMES = 360                       # 15.0 s
-
 CLIPS = {'W1': 'W1-collar-pockets.mp4', 'W2': 'W2-boots-topdown.mp4', 'W3': 'W3-walk-bag.mp4',
          'S1': 'S1-lookback-wall.mp4', 'S2': 'S2-back-hem.mp4', 'S3': 'S3-fitcheck-pov.mp4',
          'S4': 'S4-stride-landscape.mp4', 'S5': 'S5-hand-hip.mp4', 'X1': 'X1-collar-cold.mp4',
          'X2': 'X2-pocket.mp4'}
+LOGO_COL = np.array([0.315, 0.072, 0.150], np.float32)       # deep wine, the set's colour on frost
 
-# ------------------------------------------------------------------ edit decision list
+
+def S(label, clip, b0, b1, s0, spd=1.0, punch=0.0, push=0.03, zoom0=1.0, cy=640.0, snow=0.55, flow=False):
+    return dict(label=label, clip=clip, f0=B(b0), f1=B(b1), s0=s0, spd=spd, punch=punch, push=push,
+                zoom0=zoom0, cy=cy, snow=snow, flow=flow)
+
+
+
+
+
+# ------------------------------------------------------------------ edit decision lists
 BANDS = [  # clip, band reveal frame, source frame at reveal, native centre y, word, word centre y
     ('W1', B(0), 2, 650, 'Se fondre', 300),
     ('W2', B(1), 18, 520, 'dans', 958),
     ('W3', B(2), 30, 700, 'l’hiver', 1556),
 ]
-WIPE0, WIPE1 = B(3.5), B(4.5)        # the walk-past: enters on 3.5, gone on 4.5 (whoosh on beat 4)
-SHOTS = [  # name, f0, f1, source frame at f0, speed, punch-in, slow push
-    ('S1', B(3.5), B(5.5), 44, 1.0, 0.000, 0.040),
-    ('S2', B(5.5), B(7), 26, 1.0, 0.045, 0.030),
-    ('S3', B(7), B(9), 40, 1.0, 0.040, 0.030),
-    ('S4', B(9), B(10), 28, 1.0, 0.000, 0.020),
-    ('S5', B(10), B(11), 36, 1.0, 0.050, 0.030),
-    ('X2', B(11), B(13), 46, 1.2, 0.050, 0.030),
-    ('X1', B(13), B(15), 54, 1.0, 0.040, 0.070),
-]
-WHIP = B(9)                          # S3 -> S4 rotation whip, on the cymbal of beat 9
-POPS = (B(10), B(11))                # exposure pops on the two strongest kicks
-FROST0, END, SHINE = B(14), B(15), B(16)
-SNOW_K = {'band': 0.75, 'S1': 0.55, 'S2': 0.6, 'S3': 0.4, 'S4': 0.5, 'S5': 0.55, 'X2': 0.55,
-          'X1': 0.65, 'end': 0.6}
-LOGO_COL = np.array([0.315, 0.072, 0.150], np.float32)       # deep wine, the set's colour on frost
+
+CUTS = {
+    '15': SimpleNamespace(
+        n_frames=360,
+        shots=[S('S1', 'S1', 3.5, 5.5, 44, push=0.04),
+               S('S2', 'S2', 5.5, 7, 26, punch=0.045, snow=0.6),
+               S('S3', 'S3', 7, 9, 40, punch=0.04, snow=0.4),
+               S('S4', 'S4', 9, 10, 28, push=0.02, snow=0.5),
+               S('S5', 'S5', 10, 11, 36, punch=0.05),
+               S('X2', 'X2', 11, 13, 46, spd=1.2, punch=0.05),
+               S('X1', 'X1', 13, 15, 54, punch=0.04, push=0.07, snow=0.65)],
+        pops=(B(10), B(11)), frost0=B(14), end=B(15), shine=B(16), freeze=B(16),
+        crunch=(B(9) + 4, B(9) + 16), swish=(B(5.5), B(7)), charm=B(10), rustle=B(11) + 3,
+        breath=None, jump=None),
+    '20': SimpleNamespace(
+        n_frames=480,
+        shots=[S('S1', 'S1', 3.5, 5.5, 44, push=0.04),
+               S('S2', 'S2', 5.5, 7, 26, punch=0.045, snow=0.6),
+               S('S3', 'S3', 7, 9, 40, punch=0.04, snow=0.4),
+               S('S4', 'S4', 9, 11, 24, push=0.03, snow=0.5),
+               S('W2', 'W2', 11, 12, 48, punch=0.05, push=0.04, snow=0.4),          # boots planted
+               S('S5', 'S5', 12, 13, 36, punch=0.05),
+               S('X2', 'X2', 13, 15, 46, spd=1.2, punch=0.05),
+               S('W1', 'W1', 15, 16, 40, punch=0.04, push=0.05, zoom0=1.07, cy=600, snow=0.6),  # front
+               S('X1a', 'X1', 16, 17, 0, punch=0.04, push=0.03, snow=0.65),       # collar up, eyes closing
+               S('X1', 'X1', 17, 20, 56, spd=0.63, punch=0.05, push=0.08, zoom0=1.12, cy=580, snow=0.65,
+                 flow=True)],                                                     # slow smile, then frost
+        pops=(B(11), B(15), B(17)), frost0=B(19), end=B(20), shine=B(21), freeze=B(22),
+        crunch=(B(9) + 4, B(9) + 16, B(9) + 28), swish=(B(5.5), B(7), B(16)), charm=B(12),
+        rustle=B(13) + 3, breath=B(16) + 10, jump=B(17)),
+}
+C = None
+
+
+def configure(cut):
+    """Select the cut; sets the module-level timing the renderer and the sound both read."""
+    global C, N_FRAMES, SHOTS, WIPE0, WIPE1, WHIP, FROST0, END, SHINE
+    C = CUTS[cut]
+    C.cut = cut
+    N_FRAMES, SHOTS = C.n_frames, C.shots
+    WIPE0, WIPE1 = B(3.5), B(4.5)    # the walk-past: enters on 3.5, gone on 4.5 (whoosh on beat 4)
+    WHIP = B(9)                      # S3 -> S4 rotation whip, on the cymbal of beat 9
+    FROST0, END, SHINE = C.frost0, C.end, C.shine
+    return C
+
+
+configure('20')
+SNOW_BAND, SNOW_END = 0.75, 0.6
 
 
 # ------------------------------------------------------------------ sources
@@ -81,7 +123,7 @@ class Clips:
             frames.append(f)
         self.raw[name] = frames
 
-    def get(self, name, idx):
+    def get(self, name, idx, flow=False):
         if name not in self.raw:
             self._load(name)
         fr = self.raw[name]
@@ -90,8 +132,28 @@ class Clips:
         a = idx - i0
         out = self._corr(name, i0)
         if a > 0.08 and i0 + 1 < len(fr):
-            out = out * (1 - a) + self._corr(name, i0 + 1) * a
+            if flow:
+                out = self._flow_mix(name, i0, a)
+            else:
+                out = out * (1 - a) + self._corr(name, i0 + 1) * a
         return out
+
+    def _flow_mix(self, name, i0, a):
+        """Optical-flow in-between of frames i0 and i0+1 at fraction a (for slow motion)."""
+        f0, f1 = self._corr(name, i0), self._corr(name, i0 + 1)
+        k = (name, i0, 'flow')
+        if k not in self.cache:
+            g0 = cv2.cvtColor((f0 * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+            g1 = cv2.cvtColor((f1 * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+            dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+            self.cache[k] = (dis.calc(g0, g1, None), dis.calc(g1, g0, None))
+        f01, f10 = self.cache[k]
+        h, w = f0.shape[:2]
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        w0 = cv2.remap(f0, xx - a * f01[..., 0], yy - a * f01[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        w1 = cv2.remap(f1, xx - (1 - a) * f10[..., 0], yy - (1 - a) * f10[..., 1], cv2.INTER_LINEAR,
+                       borderMode=cv2.BORDER_REPLICATE)
+        return w0 * (1 - a) + w1 * a
 
     def _corr(self, name, i):
         k = (name, i)
@@ -205,33 +267,37 @@ class Film:
         return img
 
     # -------------------------------------------------------------- full-screen shots
+    @staticmethod
+    def zoom_for(sh, t):
+        return sh['zoom0'] * (1 + sh['punch'] * (1 - X.ease_out(t / 8.0)) + sh['push'] * t / (sh['f1'] - sh['f0']))
+
     def shot(self, sh, f):
-        name, f0, f1, s0, spd, punch, push = sh
+        f0, f1 = sh['f0'], sh['f1']
         t = f - f0
-        src = s0 + t * spd
-        nat = self.clips.get(name, src)
-        zoom = 1 + punch * (1 - X.ease_out(t / 8.0)) + push * t / (f1 - f0)
+        nat = self.clips.get(sh['clip'], sh['s0'] + t * sh['spd'], flow=sh['flow'])
+        zoom = self.zoom_for(sh, t)
         angles = [0.0]
-        if name == 'S3' and f >= WHIP - 6:                      # whip out, clockwise
+        if sh['label'] == 'S3' and f >= WHIP - 6:               # whip out, clockwise
             qa = lambda ff: ((ff - (WHIP - 7)) / 7.0) ** 2      # noqa: E731
             angles = [-55 * qa(f - 0.5 + i / 5) for i in range(6)]
             zoom *= 1 + 0.30 * qa(f)
-        if name == 'S4' and t < 6:                              # whip in, still turning clockwise
+        if sh['label'] == 'S4' and t < 6:                       # whip in, still turning clockwise
             qb = lambda tt: max(0.0, 1 - tt / 6.0) ** 2         # noqa: E731
             angles = [55 * qb(t - 0.5 + i / 5) for i in range(6)]
             zoom *= 1 + 0.30 * qb(t)
+        cy = sh['cy']
         if len(angles) > 1:
-            img = np.mean([place(nat, zoom, angle=a, interp=cv2.INTER_LINEAR) for a in angles], 0)
+            img = np.mean([place(nat, zoom, cy=cy, angle=a, interp=cv2.INTER_LINEAR) for a in angles], 0)
         else:
-            img = L.sharpen(place(nat, zoom), 0.35)
-        if f in range(POPS[0], POPS[0] + 4) or f in range(POPS[1], POPS[1] + 4):
-            k = f - (POPS[0] if f < POPS[1] else POPS[1])
-            img = img + (1 - img) * 0.16 * np.exp(-k / 1.3)
+            img = L.sharpen(place(nat, zoom, cy=cy), 0.35)
+        for p in C.pops:                                        # exposure pops on the big kicks
+            if p <= f < p + 4:
+                img = img + (1 - img) * 0.16 * np.exp(-(f - p) / 1.3)
         return L.grade(img)
 
     def shot_at(self, f):
         for sh in SHOTS:
-            if sh[1] <= f < sh[2]:
+            if sh['f0'] <= f < sh['f1']:
                 return sh
         return None
 
@@ -239,7 +305,7 @@ class Film:
     def end_base(self):
         if self._end_base is None:
             sh = SHOTS[-1]
-            self._end_base = self.shot(sh, sh[2] - 1)
+            self._end_base = self.shot(sh, sh['f1'] - 1)
             yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
             e = ((xx - W / 2) / 430) ** 2 + ((yy - H * 0.485) / 270) ** 2
             self._calm = X.smoothstep(0.6, 1.6, e)                  # fewer crystals behind the logo
@@ -255,7 +321,7 @@ class Film:
         z = 1 + 0.025 * t / (N_FRAMES - END)
         Mz = np.float32([[z, 0, (1 - z) * W / 2], [0, z, (1 - z) * H / 2]])
         img = cv2.warpAffine(np.clip(img, 0, 1), Mz, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
-        img = img + (1 - img) * (0.40 * np.exp(-t / 3.0))             # the hit on beat 15
+        img = img + (1 - img) * (0.40 * np.exp(-t / 3.0))             # the hit the logo lands on
         g = fr.glints(t / FPS, 0.55)
         img = 1 - (1 - img) * (1 - g[..., None] * np.array([0.95, 0.98, 1.0], np.float32))
         img = self.draw_logo(img, t)
@@ -285,7 +351,7 @@ class Film:
         img = img * (1 - visw[..., None]) + LOGO_COL * visw[..., None]
         sp = cv2.GaussianBlur(frontw, (0, 0), 1.2) * 0.9 + cv2.GaussianBlur(frontw, (0, 0), 6) * 0.6
         img = 1 - (1 - img) * (1 - np.clip(sp, 0, 1)[..., None] * np.array([0.92, 0.97, 1.0], np.float32))
-        # light glint across the mark on beat 16
+        # light glint across the mark on the next beat
         s = (t - (SHINE - END)) / 11.0
         if 0 <= s <= 1:
             yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -299,23 +365,23 @@ class Film:
         tsec = f / FPS
         if f >= END:
             img = self.end_card(f)
-            A = self.snow.alpha(tsec, SNOW_K['end'], classes=(0, 1, 2))
+            A = self.snow.alpha(tsec, SNOW_END, classes=(0, 1, 2))
         elif f < WIPE0:
             img = self.split(f)
-            A = self.snow.alpha(tsec, SNOW_K['band'])
+            A = self.snow.alpha(tsec, SNOW_BAND)
         elif f < WIPE1:
             img = self.wipe(f, self.split(f), self.shot(SHOTS[0], f))
-            A = self.snow.alpha(tsec, SNOW_K['band'])
+            A = self.snow.alpha(tsec, SNOW_BAND)
         else:
             sh = self.shot_at(f)
             img = self.shot(sh, f)
-            if sh[0] == 'X1' and f >= FROST0:
+            if sh is SHOTS[-1] and f >= FROST0:
                 p = X.ease_in_out((f - FROST0 + 1) / (END - FROST0))
                 img = self.frost.apply(img, p)
-            if sh[0] == 'S4':
-                A = cv2.rotate(self.snow_rot.alpha(tsec, SNOW_K['S4']), cv2.ROTATE_90_CLOCKWISE)
+            if sh['label'] == 'S4':
+                A = cv2.rotate(self.snow_rot.alpha(tsec, sh['snow']), cv2.ROTATE_90_CLOCKWISE)
             else:
-                A = self.snow.alpha(tsec, SNOW_K[sh[0]])
+                A = self.snow.alpha(tsec, sh['snow'])
         img = X.composite_snow(img, A)
         return L.grain(img, f, amp=0.012)
 
@@ -327,10 +393,12 @@ def to_u8(img):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
+    ap.add_argument('--cut', default='20', choices=sorted(CUTS))
     ap.add_argument('--audio')
     ap.add_argument('--stills')
     ap.add_argument('--crf', default='16')
     a = ap.parse_args()
+    configure(a.cut)
     film = Film()
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     if a.stills:

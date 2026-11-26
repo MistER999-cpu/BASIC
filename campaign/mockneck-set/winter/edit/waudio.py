@@ -3,7 +3,7 @@
 beat 0 lands on the first frame, a "freeze" on the last bars (the music is low-passed into the
 frost and rings out), and synthesised winter sound design on the edit's events.
 
-    python3 campaign/mockneck-set/winter/edit/waudio.py --music <track.mp3> --out mix.wav [--sfx-only sfx.wav]
+    python3 campaign/mockneck-set/winter/edit/waudio.py --cut 20 --music <track.mp3> --out mix.wav [--sfx-only sfx.wav]
 """
 import os
 import sys
@@ -18,7 +18,6 @@ import audio_mix as am      # noqa: E402  shared generators (whoosh, impact, shi
 import wedit as E           # noqa: E402  the edit's frame numbers
 
 SR = am.SR
-DUR = E.N_FRAMES / E.FPS                 # 15.0 s
 TRACK_START = 5.2112 - 0.010             # beat 0 of the grid, 10 ms early so the transient is whole
 rng = np.random.default_rng(41)
 
@@ -126,6 +125,17 @@ def ice_bell(base=1046.5):
     return am.pan(x, np.sin(2 * np.pi * 0.35 * t) * 0.35)
 
 
+def breath(length=1.0):
+    """A soft exhale into cold air: breathy noise with two vowel-ish resonances."""
+    n = int(length * SR)
+    x = am.pink(n)[:, 0]
+    x = 0.6 * am.bandpass(x, 500, 900) + 0.5 * am.bandpass(x, 1200, 2600) + 0.25 * am.highpass(x, 3000)
+    t = np.arange(n) / SR
+    e = np.minimum(1, t / 0.14) * np.exp(-np.maximum(0, t - 0.14) / 0.32)
+    x = x * e
+    return am.pan(x / (np.abs(x).max() + 1e-9), np.full(n, 0.05))
+
+
 def wind(n):
     x = am.pink(n)
     x = am.bandpass(x, 150, 1400)
@@ -152,19 +162,27 @@ def build_sfx(n):
     place_peak(sfx, am.swish(0.55), int(0.27 * SR), tf(E.B(4)), -15)
     place(sfx, am.impact(0.7, 60, 34, 0.15, click=False), tf(E.B(4)) - 0.02, -20)
     # cuts
-    for f in (E.SHOTS[1][1], E.SHOTS[2][1]):
+    for f in E.C.swish:
         place(sfx, am.swish(0.32), tf(f) - 0.16, -21)
     # rotation whip on beat 9
     w, pre = am.whoosh(0.30, 0.34, 300, 6500, pan_from=0.85, pan_to=-0.85)
     place_peak(sfx, w, pre, tf(E.WHIP), -7)
     place(sfx, am.impact(0.8, 82, 40, 0.18), tf(E.WHIP), -16)
     # boots on snow under the turned walk
-    for f in (E.WHIP + 4, E.WHIP + 16):
+    for f in E.C.crunch:
         place(sfx, np.stack([crunch(), crunch() * 0.9], 1), tf(f), -19)
     # bag charm on the hip shot, fabric as the hand goes into the pocket
-    place(sfx, charm_jingle(), tf(E.SHOTS[4][1]) + 0.05, -24)
-    place(send, charm_jingle(), tf(E.SHOTS[4][1]) + 0.05, -26)
-    place(sfx, rustle(0.6), tf(E.SHOTS[5][1] + 3), -19)
+    place(sfx, charm_jingle(), tf(E.C.charm) + 0.05, -24)
+    place(send, charm_jingle(), tf(E.C.charm) + 0.05, -26)
+    place(sfx, rustle(0.6), tf(E.C.rustle), -19)
+    # her breath in the cold, and the punch-in to her smile
+    if E.C.breath is not None:
+        x = breath(1.1)
+        place(sfx, x, tf(E.C.breath), -23)
+        place(send, x, tf(E.C.breath), -24)
+    if E.C.jump is not None:
+        place(sfx, am.swish(0.30), tf(E.C.jump) - 0.15, -19)
+        place(sfx, am.impact(0.6, 90, 45, 0.10, click=False), tf(E.C.jump), -21)
     # frost growing over the last shot, crystallising into the hit on beat 15
     L = tf(E.END) - tf(E.FROST0)
     place(sfx, frost_crackle(L), tf(E.FROST0), -14)
@@ -213,17 +231,20 @@ def freeze(music, t0, t1):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--cut', default='20', choices=sorted(E.CUTS))
     ap.add_argument('--music', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--sfx-only')
     a = ap.parse_args()
+    E.configure(a.cut)
+    DUR = E.N_FRAMES / E.FPS
     n = int(round(DUR * SR))
     mus = am.load_music(a.music, TRACK_START, DUR + 0.5)[:n]
     if len(mus) < n:
         mus = np.pad(mus, ((0, n - len(mus)), (0, 0)))
     fi = int(0.010 * SR)
     mus[:fi] *= np.linspace(0, 1, fi)[:, None]
-    tS = tf(E.SHINE)
+    tS = tf(E.C.freeze)
     mus = freeze(mus, tS, DUR)
     t = np.arange(n) / SR
     mus *= (1 - 0.45 * np.clip((t - tS) / (DUR - tS), 0, 1))[:, None]
