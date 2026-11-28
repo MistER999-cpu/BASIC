@@ -6,6 +6,7 @@ This repository holds two things:
   Tailwind. See [`web/README.md`](web/README.md).
 - **The liquid-glass slot reveal** — the render pipeline documented below, which
   composites the product colourways onto vertical footage.
+- **The paper-strip reel** — `tools/strips.py`, documented at the end.
 
 ---
 
@@ -194,3 +195,42 @@ exactly how one ends up in a delivered cut.
 
 Reels are stepped by an explicit `setTime(t)` rather than `requestAnimationFrame`
 or the wall clock, so a render is reproducible frame-for-frame.
+
+---
+
+# Paper-strip reel
+
+Three photo prints lie on a table, one band of the frame each, and are swapped
+on staggered clocks so one look's head sits over another's body over a third's
+trousers. Prints land like paper dropped by hand; French copy sits on paper
+labels in Bodoni Moda and Jost, the closest open fonts to the BASIC logo.
+
+```bash
+# the Instagram ad for the mock-neck set: 13 s, 1080x1920, -14 LUFS
+python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --out out/ad.mp4
+
+# stills, to check a change in seconds instead of a two-minute render
+python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --stills 0.5,4.6,12.8
+
+# an automatic cut of whatever is in the folder
+python3 tools/strips.py assets/strips --out out/strips.mp4
+```
+
+Needs Python 3 with `numpy`, `scipy` and `Pillow`, and `ffmpeg` on `PATH`.
+
+- **Shots** live in `assets/strips/`, named `<colour>_<kind>_<anything>.jpg`
+  (kind: `full`, `profile`, `half`, `detail`). The timeline refers to them by stem.
+- **`assets/strips/ad.json`** is the authored cut. `views` are crops (`u`, `v` put a
+  source point at the centre; `anchor: canvas` slices one virtual frame across all
+  three strips so they line up, `anchor: strip` crops each strip on its own);
+  `events` place views on strips; `labels` are the paper tags; `card` is the end
+  card that replaces the middle print.
+- **Timing** sits on a 120 BPM grid (0.25 s per cut). A track at that tempo,
+  started on the downbeat, lands on the cuts.
+- **Sound** is synthesised from the timeline: a chord bed, a paper slap for every
+  print that lands, a thump on each lock, a chime on the end card. Stems are
+  levelled against each other, then true-peak limited at -1.5 dB to -14 LUFS.
+  `--audio song.mp3` uses your own track instead, `--no-sound` leaves it silent.
+- **Fonts** are in `assets/fonts/` under the SIL Open Font License.
+
+The rendered ad is kept in `assets/ads/`.

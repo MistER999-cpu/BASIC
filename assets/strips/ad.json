@@ -1,0 +1,120 @@
+{
+  "_about": "BASIC mock-neck set - Instagram ad, 13 s, 1080x1920. Cuts sit on a 120 BPM grid (0.25 s = an eighth note). Three locks stop the shuffle on one detail each, with a French paper label; the middle print becomes the end card.",
+  "size": [1080, 1920],
+  "fps": 30,
+  "duration": 13.0,
+  "seed": 5,
+  "table": "#E7DFD3",
+  "camera": 0.03,
+  "bands": [[40, 647], [657, 1264], [1274, 1881]],
+  "bleed": 30,
+
+  "views": {
+    "A":        {"shot": "brown_full_front",       "anchor": "canvas", "u": 0.51, "v": 0.50,  "z": 1.0},
+    "C":        {"shot": "burgundy_half_collar",   "anchor": "canvas", "u": 0.54, "v": 0.51,  "z": 1.0},
+    "E":        {"shot": "black_half_back",        "anchor": "canvas", "u": 0.52, "v": 0.505, "z": 1.0},
+    "D_lock":   {"shot": "brown_detail_collar",    "anchor": "canvas", "u": 0.50, "v": 0.50,  "z": 1.0},
+    "F_lock":   {"shot": "burgundy_detail_pocket", "anchor": "canvas", "u": 0.50, "v": 0.54,  "z": 1.05},
+
+    "A_face":   {"shot": "brown_full_front",       "anchor": "strip", "u": 0.51, "v": 0.155, "z": 1.3},
+    "A_bag":    {"shot": "brown_full_front",       "anchor": "strip", "u": 0.42, "v": 0.66,  "z": 1.1},
+    "B_face":   {"shot": "black_half_travertine",  "anchor": "strip", "u": 0.58, "v": 0.345, "z": 1.25},
+    "B_hand":   {"shot": "black_half_travertine",  "anchor": "strip", "u": 0.66, "v": 0.57,  "z": 1.1},
+    "B_feet":   {"shot": "black_half_travertine",  "anchor": "strip", "u": 0.45, "v": 0.80,  "z": 1.12},
+    "C_face":   {"shot": "burgundy_half_collar",   "anchor": "strip", "u": 0.52, "v": 0.175, "z": 1.25},
+    "C_shoes":  {"shot": "burgundy_half_collar",   "anchor": "strip", "u": 0.60, "v": 0.855, "z": 1.2},
+    "D_face":   {"shot": "brown_detail_collar",    "anchor": "strip", "u": 0.50, "v": 0.24,  "z": 1.0},
+    "D_collar": {"shot": "brown_detail_collar",    "anchor": "strip", "u": 0.50, "v": 0.47,  "z": 1.0},
+    "D_watch":  {"shot": "brown_detail_collar",    "anchor": "strip", "u": 0.55, "v": 0.76,  "z": 1.0},
+    "E_face":   {"shot": "black_half_back",        "anchor": "strip", "u": 0.55, "v": 0.16,  "z": 1.25},
+    "E_shoes":  {"shot": "black_half_back",        "anchor": "strip", "u": 0.62, "v": 0.88,  "z": 1.15},
+    "F_pocket": {"shot": "burgundy_detail_pocket", "anchor": "strip", "u": 0.52, "v": 0.60,  "z": 1.1},
+    "F_gloves": {"shot": "burgundy_detail_pocket", "anchor": "strip", "u": 0.40, "v": 0.76,  "z": 1.1},
+    "A_fabric": {"shot": "brown_full_front",       "anchor": "strip", "u": 0.50, "v": 0.40,  "z": 2.6},
+    "E_fabric": {"shot": "black_half_back",        "anchor": "strip", "u": 0.52, "v": 0.36,  "z": 2.6}
+  },
+
+  "events": [
+    {"t": -0.16, "strip": 0, "view": "A", "enter": "slide-left"},
+    {"t": -0.10, "strip": 1, "view": "A", "enter": "slide-right"},
+    {"t": -0.04, "strip": 2, "view": "A", "enter": "slide-left"},
+
+    {"t": 0.75, "strip": 0, "view": "C"},
+    {"t": 1.00, "strip": 2, "view": "C"},
+    {"t": 1.25, "strip": 0, "view": "E"},
+    {"t": 1.50, "strip": 2, "view": "E"},
+
+    {"t": 1.75, "strip": 1, "view": "C"},
+    {"t": 2.00, "strip": 0, "view": "A"},
+    {"t": 2.25, "strip": 1, "view": "E_fabric", "logo": "paper"},
+    {"t": 2.50, "strip": 2, "view": "C_shoes"},
+    {"t": 2.75, "strip": 0, "view": "C_face"},
+    {"t": 3.00, "strip": 1, "view": "A_bag"},
+    {"t": 3.25, "strip": 2, "view": "B_feet"},
+    {"t": 3.50, "strip": 0, "view": "E_face"},
+    {"t": 3.625, "strip": 2, "view": "A"},
+    {"t": 3.75, "strip": 1, "view": "F_pocket"},
+    {"t": 3.875, "strip": 0, "view": "A_face"},
+
+    {"t": 4.00, "strips": [0, 1, 2], "stagger": 0.06, "view": "D_lock"},
+
+    {"t": 5.25, "strip": 0, "view": "E"},
+    {"t": 5.50, "strip": 1, "view": "B_hand"},
+    {"t": 5.75, "strip": 2, "view": "E_shoes"},
+    {"t": 6.00, "strip": 0, "view": "B_face"},
+    {"t": 6.125, "strip": 1, "view": "C"},
+    {"t": 6.25, "strip": 2, "view": "A"},
+    {"t": 6.375, "strip": 0, "view": "C_face"},
+
+    {"t": 6.50, "strips": [0, 1, 2], "stagger": 0.06, "view": "E"},
+
+    {"t": 7.75, "strip": 1, "view": "A_fabric", "logo": "paper"},
+    {"t": 8.00, "strip": 0, "view": "C"},
+    {"t": 8.25, "strip": 2, "view": "D_watch"},
+    {"t": 8.50, "strip": 0, "view": "B_face"},
+    {"t": 8.625, "strip": 1, "view": "D_collar"},
+    {"t": 8.75, "strip": 2, "view": "F_gloves"},
+    {"t": 8.875, "strip": 0, "view": "D_face"},
+
+    {"t": 9.00, "strips": [0, 1, 2], "stagger": 0.06, "view": "F_lock"},
+
+    {"t": 10.25, "strip": 0, "view": "A_face"},
+    {"t": 10.31, "strip": 1, "view": "C_face"},
+    {"t": 10.37, "strip": 2, "view": "B_face"},
+
+    {"t": 11.25, "strip": 1, "view": "__card__", "dur": 0.26, "lift": 0.07},
+    {"t": 11.50, "strips": [0, 2], "view": "E"},
+    {"t": 12.00, "strips": [0, 2], "view": "C"},
+    {"t": 12.50, "strips": [0, 2], "view": "A"}
+  ],
+
+  "labels": [
+    {"t0": 0.30, "t1": 1.75, "title": "Le jogging\nqui s’habille.", "sub": "NOUVEL ENSEMBLE", "x": 540, "y": 975, "angle": -1.6, "size": 96},
+    {"t0": 4.22, "t1": 5.25, "title": "Col cheminée", "sub": "MOLLETON GRATTÉ ÉPAIS", "x": 330, "y": 1125, "angle": 1.4, "size": 74},
+    {"t0": 6.72, "t1": 7.75, "title": "Dos rallongé", "sub": "OURLET ARRONDI · COUVRANT", "x": 560, "y": 800, "angle": -1.2, "size": 74},
+    {"t0": 9.22, "t1": 10.25, "title": "Poches latérales", "sub": "TAILLE ÉLASTIQUE", "x": 700, "y": 790, "angle": 1.0, "size": 70},
+    {"t0": 10.50, "t1": 11.25, "title": "Trois couleurs", "sub": "CHOCOLAT · BORDEAUX · NOIR", "x": 540, "y": 640, "angle": -0.8, "size": 70}
+  ],
+
+  "card": {
+    "logo_width": 600,
+    "cta": "Disponible maintenant",
+    "cta_size": 64,
+    "swatch_size": 28,
+    "swatches": [["#4A2E33", "Chocolat"], ["#4A182D", "Bordeaux"], ["#26232A", "Noir"]]
+  },
+
+  "sound": {
+    "chords": [
+      [0.0,   "F2",  ["A3", "C4", "E4", "G4"]],
+      [4.0,   "D2",  ["F3", "A3", "C4", "E4"]],
+      [6.5,   "Bb1", ["D3", "F3", "A3", "C4"]],
+      [9.0,   "C2",  ["E3", "G3", "Bb3", "D4"]],
+      [11.25, "F2",  ["A3", "C4", "E4", "G4"]]
+    ],
+    "kicks": [2.0, 2.5, 3.0, 3.5, 5.5, 6.0, 8.0, 8.5, 11.5, 12.0, 12.5],
+    "thumps": [0.02, 4.0, 6.5, 9.0, 11.25],
+    "risers": [4.0, 6.5, 9.0, 11.25],
+    "chime": 11.3
+  }
+}
