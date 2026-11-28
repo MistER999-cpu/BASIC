@@ -1,38 +1,30 @@
 #!/usr/bin/env python3
 """Paper-strip reel.
 
-Three photo prints lie on a table, one band of the frame each. They are swapped
-on staggered clocks, so one look's head sits over another look's body over a
-third look's trousers. Each new print lands like paper dropped by hand: a touch
-large and high, then settling with its shadow.
+Every photo is printed as three horizontal strips of paper, white-bordered and
+laid by hand on a lilac table: each strip a little crooked and warped, the
+edges overlapping with a soft shadow. Moving to the next photo, its strips are
+hard-cut on top of the old ones from the top down, a few frames apart, so for
+an instant the frame holds two photos at once. Each photo appears once.
 
-Two ways to drive it:
-
-    # automatic cut from whatever shots are in the folder
-    python3 tools/strips.py assets/strips --out out/strips.mp4
-
-    # an authored cut: views, events, paper labels, end card, sound
     python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --out out/ad.mp4
+    python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --stills 0.2,2.0,10.5
+    python3 tools/strips.py assets/strips --out out/reel.mp4          # every shot in the folder, once
 
-    # stills to check a cut quickly
-    python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --stills 0.5,4.6,12.8
+Shots are named <colour>_<kind>_<anything>.jpg (kind: full, profile, half,
+detail) and are referred to by file stem.
 
-Shots are named <colour>_<kind>_<anything>.jpg, kind one of full, profile,
-half, detail. A timeline refers to them by file stem.
+Timeline JSON (all keys optional except sequence):
 
-Timeline JSON (every key but events/views optional):
-
-    size, fps, duration, table, camera, bands, bleed
-    views   {name: {shot, u, v, z, anchor: canvas|strip, fit: strip}}
-              u, v   the source point (0-1) put at the centre of the frame
-                     (anchor canvas: one virtual full frame, sliced across the
-                     three strips, so strips line up) or of the strip itself
-                     (anchor strip: an independent crop)
-              z      zoom over a cover-fit of the frame
-    events  [{t, strip | strips, stagger, view, enter: drop|slide-left|slide-right|cut, logo: ink|paper}]
-    labels  [{t0, t1, title, sub, x, y, angle, size}]    paper tags, French copy welcome
-    card    {logo_width, cta, swatches: [[hex, name]]}  becomes view "__card__"
-    sound   {chords, kicks, thumps, risers, chime, levels} synthesised score and paper foley
+    sequence   shot stems, in order, each shown once
+    period     seconds from one photo's cascade to the next          (1.7)
+    stagger    seconds between the three strips of a cascade          (5 frames)
+    end_hold   seconds the last photo stays once it is complete       (2.2)
+    tilt       {"first": deg, "last": deg, "max": deg}  how crooked prints may lie
+    views      {stem: {u, v, z}}  reframe a photo (source point at frame centre, zoom)
+    logo       {"on": ["first", "last"], "width": 0.46, "y": 0.47, "colour": "paper"|"ink"}
+    sound      {chords, kicks, thumps, chime, levels}   synthesised score and paper foley
+    size, fps, seed, table, bands, margin
 """
 import argparse
 import json
@@ -44,34 +36,25 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
-FONTS = ROOT / "assets" / "fonts"
 LOGO = ROOT / "assets" / "brand" / "basic-logo.png"
 
 KINDS = ("full", "profile", "half", "detail")
 EXTS = {".jpg", ".jpeg", ".png", ".webp"}
-PAD = 200                      # edge-extended margin around every source
-SLACK = 150                    # how far a crop may run into that margin
+PAD = 200                          # edge-extended margin around every source
+SLACK = 150                        # how far a crop may run into it
 
-PAPER = (247, 244, 239)        # BASIC paper
-INK = (22, 17, 14)             # BASIC ink
-SHADOW = np.array([38, 28, 22], np.float32)
-FIG_TOP, FIG_BOTTOM = 0.035, 0.975
+PAPER = (247, 244, 239)            # BASIC paper, for the logo on dark fabric
+INK = (22, 17, 14)                 # BASIC ink
+PRINT_WHITE = (239, 237, 233)      # the white border of a photo print
+SHADOW = np.array([44, 38, 52], np.float32)
 
 
 def rgb(h):
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-
-def clamp(x, lo=0.0, hi=1.0):
-    return lo if x < lo else hi if x > hi else x
-
-
-def ease_out(p):
-    return 1 - (1 - p) ** 3
 
 
 def smooth(p):
@@ -99,170 +82,15 @@ class Sources:
     def __init__(self, shots):
         self.shots, self.cache = shots, {}
 
-    def add(self, sid, img):
-        self.cache[sid] = self._prep(img)
-
     def get(self, sid):
         if sid not in self.cache:
             if sid not in self.shots:
                 sys.exit(f"timeline names shot {sid!r}, which is not in the folder")
-            self.cache[sid] = self._prep(Image.open(self.shots[sid]["path"]))
+            a = np.asarray(Image.open(self.shots[sid]["path"]).convert("RGB"))
+            h, w = a.shape[:2]
+            padded = np.pad(a, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
+            self.cache[sid] = {"img": Image.fromarray(padded), "w": w, "h": h}
         return self.cache[sid]
-
-    @staticmethod
-    def _prep(img):
-        a = np.asarray(img.convert("RGB"))
-        h, w = a.shape[:2]
-        padded = np.pad(a, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
-        return {"img": Image.fromarray(padded), "w": w, "h": h, "thumb": img.convert("L").resize((64, 64))}
-
-
-def backdrop_mask(rgb_img):
-    """Foreground from distance to the border colour, smoothed so a garment close
-    to the backdrop colour is not carved open."""
-    a = np.asarray(rgb_img, dtype=np.float32)
-    border = np.concatenate([a[:8].reshape(-1, 3), a[-8:].reshape(-1, 3),
-                             a[:, :8].reshape(-1, 3), a[:, -8:].reshape(-1, 3)])
-    d = np.sqrt(((a - np.median(border, axis=0)) ** 2).sum(axis=2))
-    d = np.asarray(Image.fromarray(np.clip(d, 0, 255).astype(np.uint8)).filter(ImageFilter.BoxBlur(6)),
-                   dtype=np.float32)
-    return d > max(18.0, np.percentile(d, 60) * 0.5)
-
-
-def align_full(src, W, H):
-    """View that stands a full-body figure at the same height and centreline as
-    every other one, so heads and feet line up across looks."""
-    img = src["img"].crop((PAD, PAD, PAD + src["w"], PAD + src["h"]))
-    img.thumbnail((400, 400))
-    mask = backdrop_mask(img)
-    ys, xs = np.nonzero(mask)
-    if len(ys) < mask.size * 0.02:
-        return {}
-    k = src["w"] / img.width
-    top, bot, cx = ys.min() * k, ys.max() * k, float(np.median(xs)) * k
-    s0 = max(W / src["w"], H / src["h"])
-    s = (FIG_BOTTOM - FIG_TOP) * H / max(1.0, bot - top)
-    v = (top - (FIG_TOP * H - H / 2) / s) / src["h"]
-    return {"u": cx / src["w"], "v": v, "z": s / s0}
-
-
-# ---------------------------------------------------------------- type, labels, card
-
-def font(name, size):
-    path = FONTS / name
-    try:
-        return ImageFont.truetype(str(path), size)
-    except OSError:
-        sys.exit(f"missing font {path}")
-
-
-def tracked(draw, x_center, baseline, text, fnt, track, fill):
-    widths = [fnt.getlength(c) for c in text]
-    total = sum(widths) + track * (len(text) - 1)
-    x = x_center - total / 2
-    for c, w in zip(text, widths):
-        draw.text((x, baseline), c, font=fnt, fill=fill, anchor="ls")
-        x += w + track
-    return total
-
-
-def tracked_width(text, fnt, track):
-    return sum(fnt.getlength(c) for c in text) + track * (len(text) - 1)
-
-
-def paper_texture(w, h, base=PAPER, seed=3, amount=2.2):
-    rng = np.random.default_rng(seed)
-    n = rng.normal(0, amount, (h, w)).astype(np.float32)
-    fibre = np.asarray(Image.fromarray(np.clip(rng.normal(128, 40, (h // 4 + 1, w // 4 + 1)), 0, 255)
-                                       .astype(np.uint8)).resize((w, h), Image.BICUBIC), np.float32)
-    n += (fibre - 128) * 0.03
-    return np.clip(np.array(base, np.float32)[None, None, :] + n[..., None], 0, 255)
-
-
-def make_label(title, sub, size):
-    serif = font("BodoniModa-MediumItalic.ttf", size)
-    sans = font("Jost-Regular.ttf", max(20, round(size * 0.36)))
-    track = sans.size * 0.34
-    lines = title.split("\n")
-    asc, desc = serif.getmetrics()
-    s_asc, s_desc = sans.getmetrics()
-    content_w = max([serif.getlength(l) for l in lines] + [tracked_width(sub, sans, track) if sub else 0])
-    padx, pady = round(size * 0.6), round(size * 0.36)
-    line_h = round((asc + desc) * 0.92)
-    gap, rule_h = round(size * 0.2), max(2, size // 36)
-    h = pady * 2 + line_h * len(lines) + (gap * 2 + rule_h + s_asc + s_desc if sub else 0)
-    w = round(content_w + padx * 2)
-    B = 3                                     # transparent border so edges antialias when rotated
-    body = paper_texture(w, h, seed=len(title))
-    img = Image.fromarray(body.astype(np.uint8)).convert("RGBA")
-    d = ImageDraw.Draw(img)
-    y = pady
-    for l in lines:
-        d.text((w / 2, y + asc), l, font=serif, fill=INK, anchor="ms")
-        y += line_h
-    if sub:
-        y += gap
-        rw = round(size * 0.5)
-        d.rectangle((w / 2 - rw / 2, y, w / 2 + rw / 2, y + rule_h - 1), fill=INK)
-        y += rule_h + gap
-        tracked(d, w / 2, y + s_asc, sub, sans, track, (59, 51, 44))
-    out = Image.new("RGBA", (w + 2 * B, h + 2 * B), PAPER + (0,))
-    out.paste(img, (B, B))
-    return out
-
-
-def load_logo(colour):
-    logo = Image.open(LOGO).convert("RGBA")
-    logo = logo.crop(logo.getchannel("A").getbbox())
-    solid = Image.new("RGBA", logo.size, colour + (0,))
-    solid.putalpha(logo.getchannel("A"))
-    return solid
-
-
-def make_card(spec, size):
-    pw, ph = size
-    img = Image.fromarray(paper_texture(pw, ph, seed=11).astype(np.uint8))
-    d = ImageDraw.Draw(img)
-    logo = load_logo(INK)
-    lw = spec.get("logo_width", 560)
-    logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
-    cta = font("BodoniModa-MediumItalic.ttf", spec.get("cta_size", 58))
-    sans = font("Jost-Regular.ttf", spec.get("swatch_size", 24))
-    track = sans.size * 0.3
-    c_asc, c_desc = cta.getmetrics()
-    s_asc, s_desc = sans.getmetrics()
-    gap1, gap2 = spec.get("gap", 34), round(spec.get("gap", 34) * 0.75)
-    total = logo.height + gap1 + c_asc + c_desc + gap2 + s_asc + s_desc
-    y = (ph - total) / 2
-    img.paste(logo, (round(pw / 2 - lw / 2), round(y)), logo)
-    y += logo.height + gap1
-    d.text((pw / 2, y + c_asc), spec.get("cta", ""), font=cta, fill=INK, anchor="ms")
-    y += c_asc + c_desc + gap2
-    sw = spec.get("swatches", [])
-    if sw:
-        dot, dgap, igap = round(sans.size * 0.62), round(sans.size * 0.5), round(sans.size * 1.6)
-        widths = [dot + dgap + tracked_width(n.upper(), sans, track) for _, n in sw]
-        x = pw / 2 - (sum(widths) + igap * (len(sw) - 1)) / 2
-        base = y + s_asc
-        for (hexc, name), wdt in zip(sw, widths):
-            cy = base - s_asc * 0.36
-            d.ellipse((x, cy - dot / 2, x + dot, cy + dot / 2), fill=rgb(hexc))
-            tw = tracked_width(name.upper(), sans, track)
-            tracked(d, x + dot + dgap + tw / 2, base, name.upper(), sans, track, (59, 51, 44))
-            x += wdt + igap
-    return img
-
-
-# ---------------------------------------------------------------- geometry
-
-def local_from_canvas(center, theta, L, C, c0):
-    """q = A @ P + b: canvas point P -> layer-local point q (origin at layer centre).
-    Undoes the camera zoom C about c0, the layer position, rotation and lift scale."""
-    ct, st = math.cos(theta), math.sin(theta)
-    rinv = np.array([[ct, st], [-st, ct]])
-    A = rinv / (L * C)
-    b = rinv @ (np.array(c0, float) * (1 - 1 / C) - np.array(center, float)) / L
-    return A, b
 
 
 def clamp_window(c, half, size):
@@ -270,23 +98,36 @@ def clamp_window(c, half, size):
     return size / 2 if lo > hi else min(max(c, lo), hi)
 
 
-def view_map(view, src, band_cy, W, H, pw, ph):
-    """Local print point q -> padded source pixel: q / s + k."""
+def view_map(view, src, band_cy, W, H):
+    """Print-local point q (origin at the strip centre) -> padded source pixel,
+    q / s + k. The three strips of a photo slice one cover-fit frame, so they
+    line up wherever the paper lies straight."""
     w, h = src["w"], src["h"]
-    z = view.get("z", 1.0)
-    if "s" in view:
-        s = view["s"]
-    elif view.get("fit") == "strip":
-        s = max(pw / w, ph / h) * z
-    else:
-        s = max(W / w, H / h) * z
-    cx, cy = view.get("u", 0.5) * w, view.get("v", 0.5) * h
-    if view.get("anchor", "canvas") == "canvas":
-        cx, cy = clamp_window(cx, W / 2 / s, w), clamp_window(cy, H / 2 / s, h)
-        cy += (band_cy - H / 2) / s
-    else:
-        cx, cy = clamp_window(cx, pw / 2 / s, w), clamp_window(cy, ph / 2 / s, h)
+    s = max(W / w, H / h) * view.get("z", 1.0)
+    cx = clamp_window(view.get("u", 0.5) * w, W / 2 / s, w)
+    cy = clamp_window(view.get("v", 0.5) * h, H / 2 / s, h) + (band_cy - H / 2) / s
     return s, np.array([cx + PAD, cy + PAD])
+
+
+# ---------------------------------------------------------------- geometry
+
+def homography(src_pts, dst_pts):
+    """3x3 H with H @ (x, y, 1) ~ (u, v, 1) for four point pairs."""
+    A, b = [], []
+    for (x, y), (u, v) in zip(src_pts, dst_pts):
+        A.append([x, y, 1, 0, 0, 0, -u * x, -u * y])
+        A.append([0, 0, 0, x, y, 1, -v * x, -v * y])
+        b += [u, v]
+    return np.append(np.linalg.solve(np.array(A, float), np.array(b, float)), 1).reshape(3, 3)
+
+
+def coeffs(M):
+    M = M / M[2, 2]
+    return (M[0, 0], M[0, 1], M[0, 2], M[1, 0], M[1, 1], M[1, 2], M[2, 0], M[2, 1])
+
+
+def translate(x, y):
+    return np.array([[1, 0, x], [0, 1, y], [0, 0, 1]], float)
 
 
 def shift_down(a, n):
@@ -297,177 +138,181 @@ def shift_down(a, n):
     return out
 
 
+def table_texture(W, H, base, seed=1):
+    rng = np.random.default_rng(seed)
+    n = rng.normal(0, 1.6, (H, W)).astype(np.float32)
+    yy = np.linspace(-1, 1, H)[:, None]
+    xx = np.linspace(-1, 1, W)[None, :]
+    light = 1 - 0.04 * (xx ** 2 + yy ** 2) / 2
+    return np.clip(np.array(base, np.float32)[None, None, :] * light[..., None] + n[..., None], 0, 255)
+
+
+def load_logo(colour, width, shadow):
+    logo = Image.open(LOGO).convert("RGBA")
+    logo = logo.crop(logo.getchannel("A").getbbox())
+    logo = logo.resize((round(width), round(logo.height * width / logo.width)), Image.LANCZOS)
+    a = np.asarray(logo.getchannel("A"), np.float32) / 255
+    pad = 40
+    A = np.zeros((a.shape[0] + 2 * pad, a.shape[1] + 2 * pad), np.float32)
+    A[pad:-pad, pad:-pad] = a
+    sh = np.asarray(Image.fromarray((A * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(9)),
+                    np.float32) / 255
+    sh = shift_down(sh, 3) * shadow
+    return {"a": A, "sh": sh, "rgb": np.array(PAPER if colour == "paper" else INK, np.float32)}
+
+
 # ---------------------------------------------------------------- render
 
 class Reel:
     def __init__(self, tl, shots):
         self.tl = tl
         self.W, self.H = tl.get("size", [1080, 1920])
-        self.fps, self.D = tl.get("fps", 30), tl["duration"]
+        self.fps = tl.get("fps", 30)
         W, H = self.W, self.H
-        self.bands = tl.get("bands") or [[40, 647], [657, 1264], [1274, 1881]]
-        self.bleed = tl.get("bleed", 30)
-        self.pw = W + 2 * self.bleed
-        self.cam = tl.get("camera", 0.03)
-        self.c0 = (W / 2, H / 2)
-        self.table = paper_texture(W, H, base=rgb(tl.get("table", "#E7DFD3")), seed=1, amount=2.6)
-        yy = np.linspace(-1, 1, H)[:, None]
-        xx = np.linspace(-1, 1, W)[None, :]
-        self.table *= (1 - 0.05 * (xx ** 2 + yy ** 2) / 2)[..., None]
+        self.bands = tl.get("bands") or [[16, 700], [632, 1290], [1222, 1904]]
+        self.margin = tl.get("margin", 11)
+        self.bleed = 60
+        self.table = table_texture(W, H, rgb(tl.get("table", "#A9A5B7")))
         self.sources = Sources(shots)
-        self.views = dict(tl["views"])
+        self.views = tl.get("views", {})
+        self.rnd = random.Random(tl.get("seed", 5))
+        self.events, self.overlays, self.D = self.expand(tl)
         self.masks = {}
         self.logos = {}
-        if "card" in tl:
-            mid = self.bands[1]
-            self.sources.add("__card__", make_card(tl["card"], (self.pw, mid[1] - mid[0])))
-            self.views["__card__"] = {"shot": "__card__", "anchor": "strip", "s": 1.0}
-        self.events = self.expand(tl["events"])
-        self.labels = []
-        for lab in tl.get("labels", []):
-            img = make_label(lab["title"], lab.get("sub", ""), lab.get("size", 72))
-            self.labels.append(dict(lab, img=img.convert("RGB"), alpha=img.getchannel("A")))
+        self.cache_key, self.cache = None, None
 
-    def expand(self, events):
-        out = []
-        rnd = random.Random(self.tl.get("seed", 5))
-        for i, e in enumerate(sorted(events, key=lambda e: e["t"])):
-            strips = e.get("strips", [e.get("strip", 0)])
-            for k, sidx in enumerate(strips):
-                ev = dict(e, strip=sidx, t=e["t"] + k * e.get("stagger", 0.0), order=len(out))
-                if ev["view"] not in self.views:
-                    sys.exit(f"event at {e['t']}s names view {ev['view']!r}, which is not defined")
-                tidy = len(strips) == 3 or ev["view"] == "__card__"
-                ev["jitter"] = (rnd.uniform(-0.12, 0.12), 0.0, 0.0) if tidy else \
-                    (rnd.uniform(-0.38, 0.38), rnd.uniform(-6, 6), rnd.uniform(-2, 2))
-                ev["tilt"] = rnd.choice((-1, 1)) * rnd.uniform(0.4, 0.9)
-                ev.setdefault("dur", 0.24 if ev.get("enter", "drop").startswith("slide") else 0.12)
-                ev.setdefault("lift", 0.035)
-                out.append(ev)
-        return out
+    def expand(self, tl):
+        seq = tl["sequence"]
+        period = tl.get("period", 1.7)
+        stagger = tl.get("stagger", 5 / self.fps)
+        tilt = {"first": 0.7, "last": 0.7, "max": 2.8}
+        tilt.update(tl.get("tilt", {}))
+        events, cascades = [], []
+        for i, sid in enumerate(seq):
+            t = i * period
+            cascades.append(t)
+            cap = tilt["first"] if i == 0 else tilt["last"] if i == len(seq) - 1 else tilt["max"]
+            for k in range(3):
+                events.append(dict(self.place(cap), shot=sid, strip=k, order=len(events),
+                                   t=0.0 if i == 0 else t + k * stagger))
+        duration = cascades[-1] + 2 * stagger + tl.get("end_hold", 2.2)
+        overlays = []
+        logo = tl.get("logo")
+        if logo:
+            on = logo.get("on", ["first", "last"])
+            if "first" in on and len(seq) > 1:
+                overlays.append(dict(logo, t0=0.0, t1=cascades[1] + stagger))
+            if "last" in on:
+                overlays.append(dict(logo, t0=cascades[-1] + stagger if len(seq) > 1 else 0.0, t1=duration + 1))
+        return events, overlays, duration
 
-    def current(self, strip, t):
-        best = None
-        for e in self.events:
-            if e["strip"] == strip and e["t"] <= t + 1e-6:
-                best = e
-        return best
+    def place(self, cap):
+        """How a print lies: crooked by up to `cap` degrees (half the prints nearly
+        straight), nudged, and warped a few pixels at each corner like real paper."""
+        r = self.rnd
+        if cap <= 1.0 or r.random() < 0.45:
+            ang = r.uniform(-min(cap, 0.6), min(cap, 0.6))
+        else:
+            ang = r.choice((-1, 1)) * r.uniform(min(1.4, cap), cap)
+        return {"angle": ang, "dx": r.uniform(-18, 18), "dy": r.uniform(-6, 6),
+                "warp": [r.uniform(-5, 5) for _ in range(8)]}
 
-    def rect_mask(self, w, h):
-        key = (w, h)
+    def mask(self, w, h, inset):
+        key = (w, h, inset)
         if key not in self.masks:
             m = Image.new("L", (w + 4, h + 4), 0)
-            ImageDraw.Draw(m).rectangle((2, 2, w + 1, h + 1), fill=255)
+            ImageDraw.Draw(m).rectangle((2 + inset, 2 + inset, w + 1 - inset, h + 1 - inset), fill=255)
             self.masks[key] = m
         return self.masks[key]
 
-    def logo(self, colour):
-        if colour not in self.logos:
-            self.logos[colour] = load_logo(PAPER if colour == "paper" else INK)
-        return self.logos[colour]
+    def logo(self, spec):
+        key = (spec.get("colour", "paper"), spec.get("width", 0.46))
+        if key not in self.logos:
+            self.logos[key] = load_logo(key[0], key[1] * self.W, spec.get("shadow", 0.45))
+        return self.logos[key]
+
+    def visible(self, t):
+        """The prints on the table at time t: the newest two per strip, in the
+        order they were laid."""
+        out = []
+        for k in range(3):
+            laid = [e for e in self.events if e["strip"] == k and e["t"] <= t + 1e-6]
+            out += laid[-2:]
+        return sorted(out, key=lambda e: (e["t"], e["order"]))
 
     def frame(self, t):
-        C = 1 + self.cam * smooth(clamp(t / self.D))
-        canvas = self.table.copy()
-        live = [e for e in (self.current(i, t) for i in range(3)) if e]
-        for e in sorted(live, key=lambda e: (e["t"], e["order"])):
-            self.draw_print(canvas, e, t, C)
-        for lab in self.labels:
-            if lab["t0"] <= t < lab["t1"] + 0.14:
-                self.draw_label(canvas, lab, t, C)
-        return np.clip(canvas, 0, 255).astype(np.uint8)
+        prints = self.visible(t)
+        logos = [o for o in self.overlays if o["t0"] <= t + 1e-6 < o["t1"]]
+        key = (tuple(e["order"] for e in prints), tuple(id(o) for o in logos))
+        if key != self.cache_key:
+            canvas = self.table.copy()
+            for e in prints:
+                self.draw_print(canvas, e)
+            for o in logos:
+                self.draw_logo(canvas, o)
+            self.cache_key, self.cache = key, np.clip(canvas, 0, 255).astype(np.uint8)
+        return self.cache
 
-    def draw_print(self, canvas, e, t, C):
-        i = e["strip"]
-        y0, y1 = self.bands[i]
-        ph, bcy = y1 - y0, (y0 + y1) / 2
-        enter = e.get("enter", "drop")
-        p = 1.0 if enter == "cut" else clamp((t - e["t"]) / e["dur"])
-        k = 1 - ease_out(p)
-        ang, jx, jy = e["jitter"]
-        dx = 0.0
-        if enter.startswith("slide"):
-            side = -1 if enter == "slide-left" else 1
-            dx = side * self.W * 1.1 * k
-            ang += side * 3.0 * k
-        else:
-            ang += e["tilt"] * k
-        L = 1 + e["lift"] * k
-        A, b = local_from_canvas((self.W / 2 + jx + dx, bcy + jy), math.radians(ang), L, C, self.c0)
-        view = self.views[e["view"]]
-        src = self.sources.get(view["shot"])
-        s, kk = view_map(view, src, bcy, self.W, self.H, self.pw, ph)
-        overlay = None
-        if e.get("logo"):
-            lg = self.logo(e["logo"])
-            lw = e.get("logo_width", 0.62) * self.W
-            ls = lw / lg.width
-            overlay = (lg, A / ls, b / ls + np.array([lg.width / 2, lg.height / 2]))
-        self.draw_layer(canvas, (self.pw, ph),
-                        src["img"], A / s, b / s + kk,
-                        self.rect_mask(self.pw, ph), A, b + np.array([self.pw / 2 + 2, ph / 2 + 2]),
-                        shadow=(5 + 16 * k, 7 + 12 * k, 0.36 - 0.08 * k), overlay=overlay, edge=True)
-
-    def draw_label(self, canvas, lab, t, C):
-        p = clamp((t - lab["t0"]) / 0.22)
-        k = 1 - ease_out(p)
-        alpha, L = 1.0, 1 + 0.10 * k
-        if t >= lab["t1"]:
-            q = clamp((t - lab["t1"]) / 0.14)
-            alpha, L = 1 - q, L * (1 + 0.05 * q)
-        ang = lab.get("angle", 0) + 2.2 * k * (1 if lab.get("angle", 0) >= 0 else -1)
-        A, b = local_from_canvas((lab["x"], lab["y"]), math.radians(ang), L, C, self.c0)
-        img = lab["img"]
-        bb = b + np.array([img.width / 2, img.height / 2])
-        self.draw_layer(canvas, img.size, img, A, bb, lab["alpha"], A, bb,
-                        shadow=(6 + 14 * k, 8 + 10 * k, 0.32 * alpha), alpha=alpha)
-
-    def draw_layer(self, canvas, size, img, Ac, bc, mimg, Am, bm, shadow, alpha=1.0, overlay=None, edge=False):
-        W, H = self.W, self.H
-        w, h = size
-        # canvas bounding box of the layer, via the inverse of the local map
-        Ainv = np.linalg.inv(Am)
-        off = bm - Am @ np.zeros(2)
-        corners = [Ainv @ (np.array([x, y]) - off) for x in (0, w + 4) for y in (0, h + 4)]
-        sx, sy, sop = shadow
-        m = int(sy * 2.5 + sx + 6)
-        x0 = max(0, int(min(c[0] for c in corners)) - m)
-        x1 = min(W, int(max(c[0] for c in corners)) + m + 1)
-        y0 = max(0, int(min(c[1] for c in corners)) - m)
-        y1 = min(H, int(max(c[1] for c in corners)) + m + 1)
-        if x1 <= x0 or y1 <= y0:
+    def draw_print(self, canvas, e):
+        W, H, m = self.W, self.H, self.margin
+        y0, y1 = self.bands[e["strip"]]
+        bcy = (y0 + y1) / 2
+        pw, ph = W + 2 * self.bleed, y1 - y0               # photo area of the strip
+        PW, PH = pw + 2 * m, ph + 2 * m                   # with its white border
+        # where the four corners of the paper land on the table
+        th = math.radians(e["angle"])
+        ct, st = math.cos(th), math.sin(th)
+        cx, cy = W / 2 + e["dx"], bcy + e["dy"]
+        local = [(-PW / 2, -PH / 2), (PW / 2, -PH / 2), (PW / 2, PH / 2), (-PW / 2, PH / 2)]
+        wj = e["warp"]
+        canvas_pts = [(cx + x * ct - y * st + wj[2 * i], cy + x * st + y * ct + wj[2 * i + 1])
+                      for i, (x, y) in enumerate(local)]
+        Hcl = homography(canvas_pts, local)                # canvas -> print-local
+        rx0 = max(0, int(min(p[0] for p in canvas_pts)) - 30)
+        rx1 = min(W, int(max(p[0] for p in canvas_pts)) + 31)
+        ry0 = max(0, int(min(p[1] for p in canvas_pts)) - 30)
+        ry1 = min(H, int(max(p[1] for p in canvas_pts)) + 31)
+        if rx1 <= rx0 or ry1 <= ry0:
             return
-        rw, rh = x1 - x0, y1 - y0
+        size = (rx1 - rx0, ry1 - ry0)
+        Hr = Hcl @ translate(rx0, ry0)                     # region pixel -> print-local
+        to_mask = translate(PW / 2 + 2, PH / 2 + 2) @ Hr
+        outer = np.asarray(self.mask(PW, PH, 0).transform(size, Image.PERSPECTIVE, coeffs(to_mask),
+                                                          resample=Image.BILINEAR), np.float32) / 255
+        inner = np.asarray(self.mask(PW, PH, m).transform(size, Image.PERSPECTIVE, coeffs(to_mask),
+                                                          resample=Image.BILINEAR), np.float32) / 255
+        view = self.views.get(e["shot"], {})
+        src = self.sources.get(e["shot"])
+        s, k = view_map(view, src, bcy, W, H)
+        to_src = np.array([[1 / s, 0, k[0]], [0, 1 / s, k[1]], [0, 0, 1]]) @ Hr
+        photo = np.asarray(src["img"].transform(size, Image.PERSPECTIVE, coeffs(to_src), resample=Image.BICUBIC),
+                           np.float32)
+        reg = canvas[ry0:ry1, rx0:rx1]
+        # the paper sits a hair above what is under it: a soft shadow along its edges
+        o8 = Image.fromarray((outer * 255).astype(np.uint8))
+        near = shift_down(np.asarray(o8.filter(ImageFilter.GaussianBlur(3)), np.float32) / 255, 3)
+        far = shift_down(np.asarray(o8.filter(ImageFilter.GaussianBlur(11)), np.float32) / 255, 7)
+        sh = np.clip(0.22 * near + 0.16 * far, 0, 1)[..., None]
+        reg *= 1 - sh
+        reg += SHADOW * sh
+        paper = np.array(PRINT_WHITE, np.float32)
+        col = paper + (photo - paper) * inner[..., None]
+        o = outer[..., None]
+        reg *= 1 - o
+        reg += col * o
 
-        def coeffs(A, b):
-            return (A[0, 0], A[0, 1], A[0, 0] * x0 + A[0, 1] * y0 + b[0],
-                    A[1, 0], A[1, 1], A[1, 0] * x0 + A[1, 1] * y0 + b[1])
-
-        mask = np.asarray(mimg.transform((rw, rh), Image.AFFINE, coeffs(Am, bm), resample=Image.BILINEAR),
-                          np.float32) / 255 * alpha
-        reg = canvas[y0:y1, x0:x1]
-        if sop > 0:
-            sh = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(sy))
-            sh = shift_down(np.asarray(sh, np.float32) / 255, int(round(sx)))[..., None] * sop
-            reg *= 1 - sh
-            reg += SHADOW * sh
-        col = np.asarray(img.transform((rw, rh), Image.AFFINE, coeffs(Ac, bc), resample=Image.BICUBIC),
-                         np.float32)
-        mk = mask[..., None]
-        reg *= 1 - mk
-        reg += col * mk
-        if overlay is not None:
-            oimg, Ao, bo = overlay
-            ov = np.asarray(oimg.transform((rw, rh), Image.AFFINE, coeffs(Ao, bo), resample=Image.BICUBIC),
-                            np.float32)
-            oa = ov[..., 3:4] / 255 * mk
-            reg *= 1 - oa
-            reg += ov[..., :3] * oa
-        if edge:
-            # the cut edge of the paper catches the light along the top of each print
-            te = np.clip(mask - shift_down(mask, 2), 0, 1)[..., None] * 0.5
-            reg *= 1 - te
-            reg += 252 * te
+    def draw_logo(self, canvas, spec):
+        lg = self.logo(spec)
+        h, w = lg["a"].shape
+        x0 = round(self.W / 2 - w / 2)
+        y0 = round(spec.get("y", 0.47) * self.H - h / 2)
+        reg = canvas[y0:y0 + h, x0:x0 + w]
+        sh = lg["sh"][..., None]
+        reg *= 1 - sh
+        reg += SHADOW * 0.3 * sh
+        a = lg["a"][..., None]
+        reg *= 1 - a
+        reg += lg["rgb"] * a
 
 
 # ---------------------------------------------------------------- sound
@@ -493,8 +338,7 @@ def lufs(x, sr=48000):
     blk, hop = int(0.4 * sr), int(0.1 * sr)
     if len(y) < blk:
         return -70.0
-    idx = np.arange(0, len(y) - blk + 1, hop)
-    ms = np.array([(y[i:i + blk] ** 2).mean(axis=0).sum() for i in idx])
+    ms = np.array([(y[i:i + blk] ** 2).mean(axis=0).sum() for i in range(0, len(y) - blk + 1, hop)])
     ld = -0.691 + 10 * np.log10(np.maximum(ms, 1e-12))
     g = ms[ld > -70]
     if not len(g):
@@ -504,7 +348,7 @@ def lufs(x, sr=48000):
     return float(-0.691 + 10 * np.log10(g.mean()))
 
 
-def limit(x, sr=48000, ceiling_db=-1.5):
+def limit(x, sr=48000, ceiling_db=-2.0):
     """Lookahead true-peak limiter: hold the gain down 30 ms around each overshoot,
     ramp over 12 ms, so transients are caught without pumping the bed."""
     from scipy.ndimage import minimum_filter1d, uniform_filter1d
@@ -517,14 +361,12 @@ def limit(x, sr=48000, ceiling_db=-1.5):
     return x * np.minimum(g, need)[:, None]
 
 
-def synth_sound(tl, events, path, sr=48000):
-    """Score and foley from the timeline, as stems levelled against each other,
-    then a true-peak limiter and -14 LUFS, where Instagram plays back."""
+def synth_sound(spec, events, D, path, sr=48000):
+    """A soft chord bed, a paper slap for every strip that lands, kicks and a chime,
+    as stems levelled against each other, then true-peak limited to -14 LUFS."""
     from scipy.signal import butter, sosfilt, fftconvolve
     from scipy.io import wavfile
 
-    spec = tl.get("sound", {})
-    D = tl["duration"]
     n = int(D * sr) + sr
     rng = np.random.default_rng(9)
     T = np.arange(n) / sr
@@ -532,66 +374,53 @@ def synth_sound(tl, events, path, sr=48000):
     dry = {k: np.zeros((n, 2)) for k in names}
     send = {k: np.zeros((n, 2)) for k in names}
 
-    def bp(x, lo, hi, order=2):
-        return sosfilt(butter(order, [lo, hi], btype="band", fs=sr, output="sos"), x)
+    def bp(x, lo, hi):
+        return sosfilt(butter(2, [lo, hi], btype="band", fs=sr, output="sos"), x)
 
-    def lp(x, f, order=2):
-        return sosfilt(butter(order, f, btype="low", fs=sr, output="sos"), x)
+    def lp(x, f):
+        return sosfilt(butter(2, f, btype="low", fs=sr, output="sos"), x)
 
     def place(stem, sig, t, gain=1.0, pan=0.0, wet=0.0):
         i = int(round(t * sr))
-        if i >= n or i + len(sig) <= 0:
+        if i >= n:
             return
-        if i < 0:
-            sig, i = sig[-i:], 0
         sig = sig[: n - i]
         l, r = math.cos((pan + 1) * math.pi / 4), math.sin((pan + 1) * math.pi / 4)
         for c, g in ((0, l), (1, r)):
             dry[stem][i:i + len(sig), c] += sig * gain * g
             send[stem][i:i + len(sig), c] += sig * gain * g * wet
 
-    # pad and bass, one chord per section; each side gets the same voices,
-    # detuned a few cents apart so the bed is wide but balanced
     chords = spec.get("chords", [])
     for ci, (t0, root, notes) in enumerate(chords):
         t1 = chords[ci + 1][0] if ci + 1 < len(chords) else D + 0.5
         env = smooth(np.clip(np.clip((T - t0) / 0.45, 0, 1) * np.clip(1 - (T - t1) / 0.7, 0, 1), 0, 1))
         live = env > 0
-        tl_ = T[live]
+        tt = T[live]
         phases = rng.uniform(0, 2 * math.pi, len(notes))
         fb = freq(root)
-        bass = 0.55 * (np.sin(2 * math.pi * fb * tl_) + 0.15 * np.sin(4 * math.pi * fb * tl_))
+        bass = 0.55 * (np.sin(2 * math.pi * fb * tt) + 0.15 * np.sin(4 * math.pi * fb * tt))
         for side, cents in ((0, 3.0), (1, -3.0)):
             det = 2 ** (cents / 1200)
-            v = np.zeros(len(tl_))
+            v = np.zeros(len(tt))
             for nm, ph in zip(notes, phases):
                 f = freq(nm) * det
-                v += (np.sin(2 * math.pi * f * tl_ + ph) + 0.22 * np.sin(4 * math.pi * f * tl_ + ph)
-                      + 0.06 * np.sin(6 * math.pi * f * tl_ + ph)) / len(notes)
+                v += (np.sin(2 * math.pi * f * tt + ph) + 0.22 * np.sin(4 * math.pi * f * tt + ph)
+                      + 0.06 * np.sin(6 * math.pi * f * tt + ph)) / len(notes)
             dry["pad"][live, side] += (v + bass) * env[live]
     for c in range(2):
         dry["pad"][:, c] = lp(dry["pad"][:, c], 1900)
-    dry["pad"] *= (0.85 + 0.15 * np.sin(2 * math.pi * T / 4.0 - math.pi / 2))[:, None]
     send["pad"] = dry["pad"] * 0.6
 
-    # paper: a dry slap and a bright flick for every print that lands
     pans = {0: -0.25, 1: 0.0, 2: 0.25}
     for e in events:
+        if e["t"] <= 0:
+            continue
         m = int(0.14 * sr)
         tt = np.arange(m) / sr
         env = np.minimum(tt / 0.0015, 1) * np.exp(-tt / rng.uniform(0.018, 0.03))
         flick = bp(rng.normal(0, 1, m), rng.uniform(1400, 2200), rng.uniform(5200, 7500)) * env
         slap = lp(rng.normal(0, 1, m), 520) * np.minimum(tt / 0.001, 1) * np.exp(-tt / 0.012)
-        sig = 0.55 * flick + 1.3 * slap
-        if e.get("enter", "drop").startswith("slide"):
-            mm = int(0.22 * sr)
-            ts = np.arange(mm) / sr
-            swish = bp(rng.normal(0, 1, mm), 900, 6000) * (ts / ts[-1]) ** 2
-            place("foley", swish, e["t"], 0.35, pans[e["strip"]], 0.2)
-            place("foley", sig, e["t"] + 0.20, 1.0, pans[e["strip"]], 0.12)
-        else:
-            gain = 1.3 if e["view"] == "__card__" else 1.0
-            place("foley", sig, e["t"] + 0.03, gain * rng.uniform(0.85, 1.0), pans[e["strip"]], 0.12)
+        place("foley", 0.55 * flick + 1.3 * slap, e["t"], rng.uniform(0.85, 1.0), pans[e["strip"]], 0.12)
 
     def kick(length=0.45, f_lo=46, f_hi=120, decay=0.16):
         m = int(length * sr)
@@ -604,10 +433,6 @@ def synth_sound(tl, events, path, sr=48000):
         place("drums", kick(decay=0.11), t, 0.5)
     for t in spec.get("thumps", []):
         place("drums", kick(0.9, 40, 140, 0.32), t, 1.0, wet=0.08)
-    for t in spec.get("risers", []):
-        L = 0.7
-        tt = np.arange(int(L * sr)) / sr
-        place("fx", bp(rng.normal(0, 1, len(tt)), 1500, 9000) * (tt / L) ** 3, t - L, 1.0, 0, 0.3)
     if "chime" in spec:
         m = int(2.6 * sr)
         tt = np.arange(m) / sr
@@ -620,12 +445,10 @@ def synth_sound(tl, events, path, sr=48000):
                 for r, a, dcy in ((1, 1, 1.3), (2.0, 0.28, 0.6), (3.01, 0.1, 0.3), (4.2, 0.05, 0.18)))
         place("fx", bell, spec["chime"], 1.6, 0.0, 0.55)
 
-    # one room for everything
+    # one room; no lows in it, or two random tails pull the kick and bass to one side
+    hp = butter(2, 240, btype="high", fs=sr, output="sos")
     ir_n = int(2.2 * sr)
     ti = np.arange(ir_n) / sr
-    hp = butter(2, 240, btype="high", fs=sr, output="sos")
-    # no lows in the room: two random tails differ by several dB down there,
-    # which would pull the kick and bass to one side
     ir = np.stack([sosfilt(hp, lp(rng.normal(0, 1, ir_n), 5200)) * np.exp(-ti / 0.45) for _ in range(2)], axis=1)
     ir /= np.sqrt((ir ** 2).sum(axis=0))
     targets = spec.get("levels", {"pad": -21.0, "drums": -18.0, "foley": -19.5, "fx": -23.0})
@@ -644,83 +467,26 @@ def synth_sound(tl, events, path, sr=48000):
     wavfile.write(path, sr, (np.clip(mix, -1, 1) * 32767).astype(np.int16))
 
 
-# ---------------------------------------------------------------- automatic cut
-
-def build_timeline(shots, sources, duration, step, seed, order=None, W=1080, H=1920):
-    rnd = random.Random(seed)
-    colours = list(dict.fromkeys(s["colour"] for s in shots.values()))
-    if order:
-        unknown = [c for c in order if c not in colours]
-        if unknown:
-            sys.exit(f"--order names {unknown}, but the shots are {colours}")
-        colours = order + [c for c in colours if c not in order]
-    views = {}
-    for sid, s in shots.items():
-        if s["kind"] == "detail":
-            views[sid] = {"shot": sid, "anchor": "strip", "fit": "strip"}
-        elif s["kind"] in ("full", "profile"):
-            views[sid] = dict({"shot": sid, "anchor": "canvas"}, **align_full(sources.get(sid), W, H))
-        else:
-            views[sid] = {"shot": sid, "anchor": "canvas"}
-    by = {c: [s for s in shots.values() if s["colour"] == c] for c in colours}
-
-    def hero(c):
-        pool = [s for s in by[c] if s["kind"] == "full"] or [s for s in by[c] if s["kind"] != "detail"] or by[c]
-        return pool[0]["id"]
-
-    body_end = duration - 1.0
-    phase = (body_end - step) / len(colours)
-    events = [{"t": 0.0, "strips": [0, 1, 2], "stagger": 0.08, "view": hero(colours[0])}]
-    current = [hero(colours[0])] * 3
-    t, k = step * 2, 0
-    while t < body_end - step / 2:
-        colour = colours[min(int((t - step) / phase), len(colours) - 1)]
-        sidx = k % 3
-        pool = by[colour]
-        if rnd.random() < 0.15 and len(colours) > 1:
-            pool = by[rnd.choice([c for c in colours if c != colour])]
-        allowed = [s for s in pool if s["id"] != current[sidx] and (s["kind"] != "detail" or sidx == 1)] \
-            or [s for s in pool if s["id"] != current[sidx]] or pool
-        shot = rnd.choice(allowed)
-        if not all(current[j] == shot["id"] for j in range(3) if j != sidx):
-            current[sidx] = shot["id"]
-            ev = {"t": round(t, 3), "strip": sidx, "view": shot["id"]}
-            if sidx == 1 and shot["kind"] != "detail" and rnd.random() < 0.4:
-                ev["logo"] = "paper" if np.asarray(sources.get(shot["id"])["thumb"]).mean() < 120 else "ink"
-            events.append(ev)
-        t += step
-        k += 1
-    events.append({"t": round(body_end, 3), "strips": [0, 1, 2], "stagger": 0.06,
-                   "view": hero(colours[-1]), "logo": "paper"})
-    return {"duration": duration, "seed": seed, "views": views, "events": events,
-            "sound": {"thumps": [0.0, round(body_end, 3)]}}
-
-
 # ---------------------------------------------------------------- main
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("folder")
-    ap.add_argument("--timeline", help="authored timeline json")
+    ap.add_argument("--timeline", help="timeline json; without one, every shot in the folder, once")
     ap.add_argument("--out", default="out/strips.mp4")
-    ap.add_argument("--duration", type=float, default=8.7)
-    ap.add_argument("--step", type=float, default=0.25, help="seconds between automatic cuts (0.25 = eighths at 120 BPM)")
-    ap.add_argument("--seed", type=int, default=7)
-    ap.add_argument("--order", help="colourway order for the automatic cut, e.g. brown,black,burgundy")
     ap.add_argument("--audio", help="use this audio file instead of the synthesised score")
-    ap.add_argument("--no-sound", action="store_true", help="render without any audio track")
+    ap.add_argument("--no-sound", action="store_true", help="render without an audio track")
     ap.add_argument("--stills", help="comma-separated times: write those frames as JPGs and stop")
     args = ap.parse_args()
 
     shots = load_shots(args.folder)
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
     if args.timeline:
         tl = json.loads(Path(args.timeline).read_text())
     else:
-        tl = build_timeline(shots, Sources(shots), args.duration, args.step, args.seed,
-                            args.order.split(",") if args.order else None)
-        out.with_suffix(".timeline.json").write_text(json.dumps(tl, indent=1, ensure_ascii=False))
+        tl = {"sequence": sorted(shots, key=lambda s: (shots[s]["colour"], shots[s]["kind"] != "full", s)),
+              "logo": {"on": ["first", "last"]}}
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
     reel = Reel(tl, shots)
     W, H, fps = reel.W, reel.H, reel.fps
 
@@ -732,12 +498,10 @@ def main():
         return
 
     with tempfile.TemporaryDirectory() as tmp:
-        audio = None
-        if args.audio:
-            audio = args.audio
-        elif not args.no_sound:
+        audio = args.audio
+        if not audio and not args.no_sound:
             audio = str(Path(tmp) / "score.wav")
-            synth_sound(tl, reel.events, audio)
+            synth_sound(tl.get("sound", {}), reel.events, reel.D, audio)
         cmd = ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                "-r", str(fps), "-i", "-"]
         if audio:
@@ -746,16 +510,12 @@ def main():
         cmd += ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-profile:v", "high", "-pix_fmt", "yuv420p",
                 "-r", str(fps), "-movflags", "+faststart", str(out)]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-        n = round(reel.D * fps)
-        for f in range(n):
+        for f in range(round(reel.D * fps)):
             proc.stdin.write(reel.frame(f / fps).tobytes())
-            if f % fps == 0:
-                print(f"\r{f / fps:5.1f}s / {reel.D:.1f}s", end="", file=sys.stderr, flush=True)
         proc.stdin.close()
-        print(file=sys.stderr)
         if proc.wait() != 0:
             sys.exit("ffmpeg failed")
-    print(f"reel -> {out}")
+    print(f"reel -> {out}  ({reel.D:.2f} s)")
 
 
 if __name__ == "__main__":

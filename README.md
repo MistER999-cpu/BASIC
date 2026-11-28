@@ -200,37 +200,35 @@ or the wall clock, so a render is reproducible frame-for-frame.
 
 # Paper-strip reel
 
-Three photo prints lie on a table, one band of the frame each, and are swapped
-on staggered clocks so one look's head sits over another's body over a third's
-trousers. Prints land like paper dropped by hand; French copy sits on paper
-labels in Bodoni Moda and Jost, the closest open fonts to the BASIC logo.
+Every photo is printed as three horizontal strips of paper, white-bordered and
+laid by hand on a lilac table, each strip a little crooked and warped, the edges
+overlapping with a soft shadow. Moving to the next photo, its strips are
+hard-cut on top of the old ones from the top down, five frames apart, so for an
+instant the frame holds two photos at once. Each photo appears once.
 
 ```bash
-# the Instagram ad for the mock-neck set: 13 s, 1080x1920, -14 LUFS
+# the Instagram ad for the mock-neck set: about 11 s, 1080x1920, -14 LUFS
 python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --out out/ad.mp4
 
-# stills, to check a change in seconds instead of a two-minute render
-python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --stills 0.5,4.6,12.8
+# stills, to check a change in seconds
+python3 tools/strips.py assets/strips --timeline assets/strips/ad.json --stills 0.5,2.6,9.5
 
-# an automatic cut of whatever is in the folder
-python3 tools/strips.py assets/strips --out out/strips.mp4
+# every shot in the folder, once
+python3 tools/strips.py assets/strips --out out/reel.mp4
 ```
 
 Needs Python 3 with `numpy`, `scipy` and `Pillow`, and `ffmpeg` on `PATH`.
 
 - **Shots** live in `assets/strips/`, named `<colour>_<kind>_<anything>.jpg`
-  (kind: `full`, `profile`, `half`, `detail`). The timeline refers to them by stem.
-- **`assets/strips/ad.json`** is the authored cut. `views` are crops (`u`, `v` put a
-  source point at the centre; `anchor: canvas` slices one virtual frame across all
-  three strips so they line up, `anchor: strip` crops each strip on its own);
-  `events` place views on strips; `labels` are the paper tags; `card` is the end
-  card that replaces the middle print.
-- **Timing** sits on a 120 BPM grid (0.25 s per cut). A track at that tempo,
-  started on the downbeat, lands on the cuts.
-- **Sound** is synthesised from the timeline: a chord bed, a paper slap for every
-  print that lands, a thump on each lock, a chime on the end card. Stems are
-  levelled against each other, then true-peak limited at -1.5 dB to -14 LUFS.
-  `--audio song.mp3` uses your own track instead, `--no-sound` leaves it silent.
-- **Fonts** are in `assets/fonts/` under the SIL Open Font License.
+  (kind: `full`, `profile`, `half`, `detail`).
+- **`assets/strips/ad.json`** is the cut: `sequence` lists the photos in order,
+  `period` is the time from one photo to the next, `tilt` caps how crooked the
+  prints lie (the first and last photo lie nearly straight), `logo` puts the
+  BASIC logo on the first and last photo, and `seed` reshuffles how the paper
+  falls.
+- **Sound** is synthesised: a chord bed, a paper slap for every strip that
+  lands, a soft kick on each new photo and a chime under the closing logo,
+  levelled as stems and true-peak limited to -14 LUFS. `--audio song.mp3` uses
+  your own track instead, `--no-sound` leaves it silent.
 
 The rendered ad is kept in `assets/ads/`.
